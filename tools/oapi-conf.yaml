@@ -1,0 +1,7 @@
+generate:
+  strict-server: true
+  gorilla-server: true
+  models: true
+  embedded-spec: true
+compatibility:
+  apply-gorilla-middleware-first-to-last: true

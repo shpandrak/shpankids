@@ -1,0 +1,123 @@
+openapi: 3.0.1
+info:
+  title: ShpanKids API
+  version: "0.1"
+tags:
+  - name: ShpanKids API
+paths:
+  /api/userInfo:
+    get:
+      tags:
+        - UI
+      description: Get logged in user info
+      operationId: getUserInfo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UIUserInfo'
+  /api/commands/updateTaskStatus:
+    post:
+      tags:
+        - shpankids
+      description: Update Task Status
+      operationId: updateTaskStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiUpdateTaskStatusCommandArgs'
+      responses:
+        '200':
+          description: OK
+
+  /api/tasks:
+    get:
+      tags:
+        - shpankids
+      description: list Tasks
+      operationId: listTasks
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTask'
+
+components:
+  schemas:
+    UIUserInfo:
+      type: object
+      description: User Info
+      required:
+        - email
+        - familyDisplayName
+        - familyUri
+      properties:
+        email:
+          type: string
+          format: email
+        familyDisplayName:
+          type: string
+        familyUri:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    ApiTask:
+      type: object
+      description: Task
+      required:
+        - id
+        - title
+        - description
+        - status
+        - forDate
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        forDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ApiTaskStatus'
+
+    ApiTaskStatus:
+      type: string
+      enum:
+        - open
+        - done
+        - blocked
+        - irrelevant
+
+
+    ApiUpdateTaskStatusCommandArgs:
+      type: object
+      required:
+        - taskId
+        - forDate
+        - status
+      properties:
+        taskId:
+          type: string
+        forDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ApiTaskStatus'
+        comment:
+          type: string
