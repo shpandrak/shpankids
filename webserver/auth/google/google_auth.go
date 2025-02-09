@@ -10,19 +10,16 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"shpankids/shpankids"
 	"strings"
 )
 
-const clientId = "[clientId]"
-const clientSecret = "[clientSecret]"
 const oAuthStateStringGl = "whatever"
 
 var (
 	oauthConfGl = &oauth2.Config{
-		ClientID:     clientId,
-		ClientSecret: clientSecret,
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
-		Endpoint:     google.Endpoint,
+		Scopes:   []string{"https://www.googleapis.com/auth/userinfo.email"},
+		Endpoint: google.Endpoint,
 	}
 )
 
@@ -60,6 +57,10 @@ func handleLogin(w http.ResponseWriter, r *http.Request, oauthConf *oauth2.Confi
 var authCallbackFunc func(r *http.Request, w http.ResponseWriter, email string)
 
 func RegisterCallbacks(router *mux.Router, authCallback func(r *http.Request, w http.ResponseWriter, email string)) {
+	oAuthSecret := shpankids.GetSecrets().OAuth
+	oauthConfGl.ClientID = oAuthSecret.ClientId
+	oauthConfGl.ClientSecret = oAuthSecret.ClientSecret
+
 	authCallbackFunc = authCallback
 	router.HandleFunc("/login-gl", handleGoogleLogin)
 	router.HandleFunc("/callback-gl", callBackFromGoogle)
