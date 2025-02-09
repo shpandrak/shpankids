@@ -41,7 +41,7 @@ gen-shpan: ## Shpan codegen
  	goimports -w ../../ermodel
 
 deploy-gcp:
-	 gcloud run deploy shpankids --source . --region=europe-west1
+	 gcloud run deploy shpankids --source . --region=europe-west1 --update-secrets=SHPAN_SECRETS=SHPANSECRET:latest
 
 gen-openapi:
 	cd tools; \
