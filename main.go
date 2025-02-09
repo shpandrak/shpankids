@@ -9,6 +9,7 @@ import (
 	"shpankids/app"
 	firestorekvs "shpankids/infra/database/firestore"
 	"shpankids/infra/database/kvstore"
+	"shpankids/shpankids"
 )
 
 const projectID = "shpankids"
@@ -22,6 +23,11 @@ func main() {
 	// get a flag for localdev
 	_ = flag.String("runtime-env", "prod", "have a separate flag for local development")
 	flag.Parse()
+
+	err := shpankids.DetectSecrets()
+	if err != nil {
+		log.Fatalf("Failed to detect secrets: %v", err)
+	}
 
 	var kvs kvstore.RawJsonStore
 	fs, err := firestore.NewClient(context.Background(), projectID)
