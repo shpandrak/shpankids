@@ -1,0 +1,46 @@
+**/.certs
+.build/
+
+# GCP secrets
+secrets.json
+
+# Mac files
+.DS_Store
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+
+# Jrebel
+rebel.xml
+rebel2.xml
+
+tools/out
+tools/tsout
+tools/codegen/out
+
+# Shpan-Codegen
+#**/*.scg.*
+
+# Python-specific
+__pycache__/
+*.pyc
+*.pyo
+
+/data/
+
+# UI Specific
+node_modules
+ui/dist
+
+.jfrog
+
+.vscode
+.favorites.json
+
+# Python virtual environment
+.env
