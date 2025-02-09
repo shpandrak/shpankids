@@ -11,16 +11,17 @@ import (
 type Manager struct {
 	familyRepository   repository
 	userSessionManager shpankids.UserSessionManager
+	kvs                kvstore.RawJsonStore
 }
 
 func NewFamilyManager(
 	kvs kvstore.RawJsonStore,
 	userSessionManager shpankids.UserSessionManager,
 ) *Manager {
-	familyRepository := newFamilyRepository(kvs)
 	return &Manager{
-		familyRepository:   familyRepository,
+		familyRepository:   newFamilyRepository(kvs),
 		userSessionManager: userSessionManager,
+		kvs:                kvs,
 	}
 }
 
@@ -48,6 +49,50 @@ func mapFamilyDto(fam *dbFamily) *shpankids.FamilyDto {
 		Name: fam.Name,
 	}
 }
+func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyTask shpankids.FamilyTaskDto) error {
+	// Get the user email from the context
+	_, err := m.userSessionManager(ctx)
+	if err != nil {
+		return err
+	}
+	familyTasksStore, err := m.kvs.CreateSpaceStore(ctx, []string{"families", familyId})
+	if err != nil {
+		return err
+	}
+	repo := newFamilyTaskRepository(familyTasksStore)
+	// Create the family task in repo
+	return repo.Set(ctx, familyTask.TaskId, dbFamilyTask{
+		Title:       familyTask.Title,
+		Description: familyTask.Description,
+		MemberIds:   familyTask.MemberIds,
+	})
+}
+func (m *Manager) FamilyTasks(ctx context.Context, familyId string) ([]shpankids.FamilyTaskDto, error) {
+	// Get the user email from the context
+	_, err := m.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	familyTasksStore, err := m.kvs.CreateSpaceStore(ctx, []string{"families", familyId})
+	if err != nil {
+		return nil, err
+	}
+	repo := newFamilyTaskRepository(familyTasksStore)
+	// Find the family tasks in repo
+	dbTasks, err := repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return functional.MapToSliceNoErr(dbTasks, func(taskId string, dbFt dbFamilyTask) shpankids.FamilyTaskDto {
+		return shpankids.FamilyTaskDto{
+			TaskId:      taskId,
+			Title:       dbFt.Title,
+			Description: dbFt.Description,
+			MemberIds:   dbFt.MemberIds,
+		}
+	}), nil
+}
+
 func (m *Manager) CreateFamily(
 	ctx context.Context,
 	familyId string,

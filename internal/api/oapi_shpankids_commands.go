@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
-	"shpankids/domain/task"
 	"shpankids/infra/util/castutil"
 	"shpankids/openapi"
+	"shpankids/shpankids"
 )
 
 func (oa *OapiServerApiImpl) UpdateTaskStatus(
@@ -15,7 +15,7 @@ func (oa *OapiServerApiImpl) UpdateTaskStatus(
 		ctx,
 		request.Body.ForDate,
 		request.Body.TaskId,
-		task.Status(request.Body.Status),
+		shpankids.Status(request.Body.Status),
 		castutil.ValPtrToVal(request.Body.Comment),
 	)
 	if err != nil {

@@ -20,5 +20,5 @@ func Start(kvs kvstore.RawJsonStore, fs *firestore.Client) error {
 	if err != nil {
 		return fmt.Errorf("failed to bootstrap app: %v", err)
 	}
-	return webserver.Start(fs, userManager)
+	return webserver.Start(fs, userManager, familyManager, sessionManager)
 }

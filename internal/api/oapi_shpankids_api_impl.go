@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"shpankids/domain/task"
 	"shpankids/infra/util/functional"
 	"shpankids/openapi"
 	"shpankids/shpankids"
@@ -12,13 +11,13 @@ import (
 type OapiServerApiImpl struct {
 	userSessionManager shpankids.UserSessionManager
 	userManager        shpankids.UserManager
-	taskManager        task.Manager
+	taskManager        shpankids.Manager
 }
 
 func NewOapiServerApiImpl(
 	userSessionManager shpankids.UserSessionManager,
 	userManager shpankids.UserManager,
-	taskManager task.Manager,
+	taskManager shpankids.Manager,
 
 ) *OapiServerApiImpl {
 	return &OapiServerApiImpl{
@@ -38,7 +37,7 @@ func (oa *OapiServerApiImpl) ListTasks(
 		return nil, err
 	}
 	return openapi.ListTasks200JSONResponse(
-		functional.MapSliceNoErr(taskList, func(t task.Task) openapi.ApiTask {
+		functional.MapSliceNoErr(taskList, func(t shpankids.Task) openapi.ApiTask {
 			return openapi.ApiTask{
 				Id:          t.Id,
 				Title:       t.Title,

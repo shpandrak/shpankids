@@ -1,4 +1,4 @@
-package task
+package shpankids
 
 import (
 	"context"

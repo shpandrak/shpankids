@@ -51,6 +51,35 @@ func appBootstrap(
 		if err != nil {
 			return err
 		}
+
+		// Create default tasks for the family
+		err = familyManager.CreateFamilyTask(
+			bootstrapCtx,
+			shpanFamilyId,
+			shpankids.FamilyTaskDto{
+				TaskId:      "task1",
+				Title:       "Do Homework",
+				Description: "Do your homework",
+				MemberIds:   []string{peteUserId, shpanUserId},
+			},
+		)
+		if err != nil {
+			return err
+		}
+		err = familyManager.CreateFamilyTask(
+			bootstrapCtx,
+			shpanFamilyId,
+			shpankids.FamilyTaskDto{
+				TaskId:      "task2",
+				Title:       "Take out your lunch box",
+				Description: "Lunch box -> dishwasher",
+				MemberIds:   []string{peteUserId, shpanUserId},
+			},
+		)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	for _, currDefaultUser := range defaultUsers {

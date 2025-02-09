@@ -44,7 +44,11 @@ func (kvs *kvsImpl) CreateSpaceStore(_ context.Context, spaceHierarchy []string)
 	for i := 0; i < len(spaceHierarchy); i += 2 {
 		docId := spaceHierarchy[i]
 		colId := spaceHierarchy[i+1]
-		documentRef = documentRef.Collection(colId).Doc(docId)
+		if documentRef == nil {
+			documentRef = kvs.client.Collection(colId).Doc(docId)
+		} else {
+			documentRef = documentRef.Collection(colId).Doc(docId)
+		}
 	}
 	return NewFirestoreKvs(kvs.client, documentRef), nil
 

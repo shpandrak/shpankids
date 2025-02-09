@@ -6,7 +6,6 @@ import (
 )
 
 type repository kvstore.JsonKvStore[string, dbFamily]
-type memberRepository kvstore.JsonKvStore[string, dbFamilyMember]
 
 type Role string
 

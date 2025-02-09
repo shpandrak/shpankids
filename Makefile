@@ -26,13 +26,6 @@ build-ui:   ## Build UI app
 	mkdir -p .build/ui; \
 	cp -rf ./ui/dist .build/ui
 
-build-ui:   ## Build UI app
-	cd ui; \
-	npm run build; \
-	cd ..;\
-	mkdir -p .build/ui; \
-	cp -rf ./ui/dist .build/ui
-
 build: build-go build-ui
 
 gen-shpan: ## Shpan codegen

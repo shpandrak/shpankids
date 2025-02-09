@@ -37,7 +37,12 @@ const IndexPage = `
 
 var store = sessions.NewCookieStore([]byte("shpankids-secret"))
 
-func Start(fs *firestore.Client, userManager shpankids.UserManager) error {
+func Start(
+	fs *firestore.Client,
+	userManager shpankids.UserManager,
+	familyManager shpankids.FamilyManager,
+	sessionManager shpankids.SessionManager,
+) error {
 
 	router := mux.NewRouter().StrictSlash(true)
 
@@ -55,7 +60,7 @@ func Start(fs *firestore.Client, userManager shpankids.UserManager) error {
 	apiImpl := api.NewOapiServerApiImpl(
 		auth.GetUserInfo,
 		userManager,
-		task.NewTaskManager(fs, auth.GetUserInfo),
+		task.NewTaskManager(fs, auth.GetUserInfo, familyManager, sessionManager),
 	)
 	withStrictHandler := openapi.NewStrictHandlerWithOptions(apiImpl, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
