@@ -2,21 +2,15 @@ package family
 
 import (
 	"shpankids/infra/database/kvstore"
+	"shpankids/shpankids"
 	"time"
 )
 
 type repository kvstore.JsonKvStore[string, dbFamily]
 
-type Role string
-
-const (
-	RoleAdmin  Role = "admin"
-	RoleMember Role = "member"
-)
-
 type dbFamilyMember struct {
-	UserId string `json:"userId"`
-	Role   Role   `json:"role"`
+	UserId string         `json:"userId"`
+	Role   shpankids.Role `json:"role"`
 }
 
 type dbFamily struct {

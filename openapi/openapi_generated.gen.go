@@ -22,6 +22,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ApiFamilyRole.
+const (
+	Admin  ApiFamilyRole = "admin"
+	Member ApiFamilyRole = "member"
+)
+
 // Defines values for ApiTaskStatus.
 const (
 	Blocked    ApiTaskStatus = "blocked"
@@ -29,6 +35,9 @@ const (
 	Irrelevant ApiTaskStatus = "irrelevant"
 	Open       ApiTaskStatus = "open"
 )
+
+// ApiFamilyRole defines model for ApiFamilyRole.
+type ApiFamilyRole string
 
 // ApiTask Task
 type ApiTask struct {
@@ -49,6 +58,22 @@ type ApiUpdateTaskStatusCommandArgs struct {
 	ForDate time.Time     `json:"forDate"`
 	Status  ApiTaskStatus `json:"status"`
 	TaskId  string        `json:"taskId"`
+}
+
+// UIFamilyInfo Family info
+type UIFamilyInfo struct {
+	AdminEmail        openapi_types.Email `json:"adminEmail"`
+	FamilyDisplayName string              `json:"familyDisplayName"`
+	FamilyUri         string              `json:"familyUri"`
+	Members           []UIFamilyMember    `json:"members"`
+}
+
+// UIFamilyMember Family member
+type UIFamilyMember struct {
+	Email     openapi_types.Email `json:"email"`
+	FirstName string              `json:"firstName"`
+	LastName  string              `json:"lastName"`
+	Role      ApiFamilyRole       `json:"role"`
 }
 
 // UIUserInfo User Info
@@ -72,7 +97,10 @@ type ServerInterface interface {
 	// (GET /api/tasks)
 	ListTasks(w http.ResponseWriter, r *http.Request)
 
-	// (GET /api/userInfo)
+	// (GET /api/ui/familyInfo)
+	GetFamilyInfo(w http.ResponseWriter, r *http.Request)
+
+	// (GET /api/ui/userInfo)
 	GetUserInfo(w http.ResponseWriter, r *http.Request)
 }
 
@@ -106,6 +134,21 @@ func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListTasks(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetFamilyInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetFamilyInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFamilyInfo(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -247,7 +290,9 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/tasks", wrapper.ListTasks).Methods("GET")
 
-	r.HandleFunc(options.BaseURL+"/api/userInfo", wrapper.GetUserInfo).Methods("GET")
+	r.HandleFunc(options.BaseURL+"/api/ui/familyInfo", wrapper.GetFamilyInfo).Methods("GET")
+
+	r.HandleFunc(options.BaseURL+"/api/ui/userInfo", wrapper.GetUserInfo).Methods("GET")
 
 	return r
 }
@@ -284,6 +329,22 @@ func (response ListTasks200JSONResponse) VisitListTasksResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetFamilyInfoRequestObject struct {
+}
+
+type GetFamilyInfoResponseObject interface {
+	VisitGetFamilyInfoResponse(w http.ResponseWriter) error
+}
+
+type GetFamilyInfo200JSONResponse UIFamilyInfo
+
+func (response GetFamilyInfo200JSONResponse) VisitGetFamilyInfoResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetUserInfoRequestObject struct {
 }
 
@@ -309,7 +370,10 @@ type StrictServerInterface interface {
 	// (GET /api/tasks)
 	ListTasks(ctx context.Context, request ListTasksRequestObject) (ListTasksResponseObject, error)
 
-	// (GET /api/userInfo)
+	// (GET /api/ui/familyInfo)
+	GetFamilyInfo(ctx context.Context, request GetFamilyInfoRequestObject) (GetFamilyInfoResponseObject, error)
+
+	// (GET /api/ui/userInfo)
 	GetUserInfo(ctx context.Context, request GetUserInfoRequestObject) (GetUserInfoResponseObject, error)
 }
 
@@ -397,6 +461,30 @@ func (sh *strictHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetFamilyInfo operation middleware
+func (sh *strictHandler) GetFamilyInfo(w http.ResponseWriter, r *http.Request) {
+	var request GetFamilyInfoRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFamilyInfo(ctx, request.(GetFamilyInfoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFamilyInfo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFamilyInfoResponseObject); ok {
+		if err := validResponse.VisitGetFamilyInfoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetUserInfo operation middleware
 func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 	var request GetUserInfoRequestObject
@@ -424,16 +512,18 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/6SUTW/bPAzHv4rB5zl6TbfdfMtWoAg6bAO6nIoeVItJ2Vgvk5gCQeDvPlBy4iR2X7Ld",
-	"DIki+f/xT2+hdsY7i5YjVFuI9SMalT6nnn6puJJPjbEO5JmchQrSaQk+OI+BCeMgZAu88QgVRA5kl9CW",
-	"oNd4pRjlbuGCUQwVaMX4gckglMMHCxfOe0B6tHBkxevU4v8BF1DBf5Ne8qTTO+nE3ubgtgQmbnAkYVtC",
-	"wN9rCqihupOiu9jyiMG+cK/kft+0e3jCmqXMcd1qC2jXRhI7j5JEOyuZHxpXr1BqUQjY4LOyfJCvVzv1",
-	"NPeCqc/61RmjrJ6GZSpwPLbaGYOWR8mdPYG/Ra3iaqbfZt3F9Y3tK46Rnc/mEcPMLtzQwXJTpKtTG6NR",
-	"1BwpzidjBlWGms0VRd+ozXdlcBxiipoHGr+lEPnFt4168fIEza7JYU+HHQwxSR7qEHWOh9tHr+wN6VhM",
-	"f86ghGcMMWO7vPgobYk1lSeo4POFHJXgFT8mfBPlSWYuhouT9YkTk/1c5JGBpMhCQovb3d7IXJQEiDng",
-	"1NaQCWDkL05vspctd15W3jdUp8eTp5h/Sdl/73DnawvUthl99M7GbJlPl5dDQT9u0oxYydLdQRSmK9IR",
-	"7uU4YRI7pwRLHCHSUOTEY0jiG0Xe3Yx18m4OxGjeu65pUbN5VAhqk71ztuj1wU6O6r5GLhq3XKIuyBYS",
-	"XlBe1GMI18j7/f5HDK+pP/iLvC14PhOl/cEWbNrek5Vq79s/AQAA//+GJJOCdwcAAA==",
+	"H4sIAAAAAAAC/7yWTW/bOBCG/4owu0dtlG1vuqVNGxjpF+r6FOTAiGNnYvGjJBXAMPTfC1KSZUl0bKdo",
+	"bwY5mpn3mdErb6FQQiuJ0lnIt2CLRxQs/LzS9JEJKjffVYn+AGUlIL8DxgVJSEGgeEAD9ym4jUbIwTpD",
+	"cgV16p/9wezaP8XRFoa0IyUhh3CagjZKo3GEdhKynWbjFV4zF3pYKiOYgxw4c/ifI4EQKb9U5rwHiEcL",
+	"W8dcFVr81+AScvgn63FlLausFTtvgusUHLmG2ChhnYLBnxUZ5J4jcehi0wGDXeFeSQ9ZPTxh4fYgz3dN",
+	"dgNSGn0SrqTP/FCqYo2+FhmDJT4z6Q4NbaE9pj7reyUEk/zKrEKB4dgKJQRKFyV39gRei5rZ9YwfZ93G",
+	"9Y3tKsbILmbN5s/kUk13uLlLyF+OVzm8Gx8Eo3IgHcNJbFNDrmuyumSbL0xgnGaIWhiK3jbvYShPDsVR",
+	"iJ26z837W+/aYsawzQRdXzzdlxfrve/lJapt3UNcW1sZk8UzoJKx7iDMkr1waVqvO7KEe8Y4xtV11Tex",
+	"V7ItEKezsGjiG+dvklls3/DvrtqryR6CFFmhvoMpJp+HWkSty8L8UTN5S9wmV99mkMIzGttgu7z437fl",
+	"7ZBpghzeXvijFDRzjwFfxjT5EXuTs1k1cr9gecq6yEBCZOJDk3nn1X4uzAd4Q4KxlUJDAK17p/im8U/p",
+	"Wv9kWpdUhIezJ9t8Bpt1O2EZXzLtum7QW62kbVbmzeXlVNDX2zAjx7zR34H1TNfELdz744DJW2hIsMII",
+	"kZKsCzymJD6Rdd1NrJOTOZzkbt1fj6mt1en5oivKloNPQVT8DbrEovVrlywHX4chiRt0ex+W36RxisWH",
+	"OseVL2ZDydWeEx0UXKrVCnlCMvHhBwXvXO2Pyt1VOVVsf7AFGTxrZCT1ff0rAAD//1sP7OYdCwAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

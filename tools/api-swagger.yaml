@@ -5,7 +5,7 @@ info:
 tags:
   - name: ShpanKids API
 paths:
-  /api/userInfo:
+  /api/ui/userInfo:
     get:
       tags:
         - UI
@@ -18,6 +18,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UIUserInfo'
+
+  /api/ui/familyInfo:
+    get:
+      tags:
+        - UI
+      description: Get session family info
+      operationId: getFamilyInfo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UIFamilyInfo'
+
   /api/commands/updateTaskStatus:
     post:
       tags:
@@ -32,6 +47,7 @@ paths:
       responses:
         '200':
           description: OK
+
 
   /api/tasks:
     get:
@@ -48,6 +64,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ApiTask'
+
 
 components:
   schemas:
@@ -71,6 +88,51 @@ components:
         lastName:
           type: string
 
+    UIFamilyInfo:
+      type: object
+      description: Family info
+      required:
+        - familyUri
+        - adminEmail
+        - familyDisplayName
+        - members
+      properties:
+        adminEmail:
+          type: string
+          format: email
+        familyUri:
+          type: string
+        familyDisplayName:
+            type: string
+        members:
+            type: array
+            items:
+                $ref: '#/components/schemas/UIFamilyMember'
+
+    UIFamilyMember:
+      type: object
+      description: Family member
+      required:
+          - email
+          - firstName
+          - lastName
+          - role
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/ApiFamilyRole'
+
+    ApiFamilyRole:
+        type: string
+        enum:
+            - admin
+            - member
     ApiTask:
       type: object
       description: Task

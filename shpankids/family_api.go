@@ -2,11 +2,27 @@ package shpankids
 
 import (
 	"context"
+	"time"
 )
 
 type FamilyDto struct {
-	Id   string
-	Name string
+	Id         string
+	Name       string
+	OwnerEmail string
+	CreatedOn  time.Time
+	Members    []FamilyMemberDto
+}
+
+type Role string
+
+const (
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
+)
+
+type FamilyMemberDto struct {
+	UserId string
+	Role   Role
 }
 
 type FamilyTaskDto struct {

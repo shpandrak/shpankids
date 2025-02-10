@@ -45,8 +45,16 @@ func (m *Manager) FindFamily(ctx context.Context, familyId string) (*shpankids.F
 
 func mapFamilyDto(fam *dbFamily) *shpankids.FamilyDto {
 	return &shpankids.FamilyDto{
-		Id:   fam.Id,
-		Name: fam.Name,
+		Id:         fam.Id,
+		Name:       fam.Name,
+		OwnerEmail: fam.CreatedBy,
+		CreatedOn:  fam.CreatedAt,
+		Members: functional.MapSliceNoErr(fam.Members, func(member dbFamilyMember) shpankids.FamilyMemberDto {
+			return shpankids.FamilyMemberDto{
+				UserId: member.UserId,
+				Role:   member.Role,
+			}
+		}),
 	}
 }
 func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyTask shpankids.FamilyTaskDto) error {
@@ -116,12 +124,12 @@ func (m *Manager) CreateFamily(
 			Members: append([]dbFamilyMember{
 				{
 					UserId: *loggedInUserEmail,
-					Role:   RoleAdmin,
+					Role:   shpankids.RoleAdmin,
 				},
 			}, functional.MapSliceNoErr(memberUserIds, func(userId string) dbFamilyMember {
 				return dbFamilyMember{
 					UserId: userId,
-					Role:   RoleMember,
+					Role:   shpankids.RoleMember,
 				}
 			})...),
 		},

@@ -12,18 +12,24 @@ type OapiServerApiImpl struct {
 	userSessionManager shpankids.UserSessionManager
 	userManager        shpankids.UserManager
 	taskManager        shpankids.Manager
+	familyManager      shpankids.FamilyManager
+	sessionManager     shpankids.SessionManager
 }
 
 func NewOapiServerApiImpl(
 	userSessionManager shpankids.UserSessionManager,
 	userManager shpankids.UserManager,
 	taskManager shpankids.Manager,
+	familyManager shpankids.FamilyManager,
+	sessionManager shpankids.SessionManager,
 
 ) *OapiServerApiImpl {
 	return &OapiServerApiImpl{
 		userSessionManager: userSessionManager,
 		userManager:        userManager,
 		taskManager:        taskManager,
+		familyManager:      familyManager,
+		sessionManager:     sessionManager,
 	}
 }
 

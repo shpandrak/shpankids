@@ -15,9 +15,12 @@
 
 import * as runtime from '../runtime';
 import type {
+  UIFamilyInfo,
   UIUserInfo,
 } from '../models/index';
 import {
+    UIFamilyInfoFromJSON,
+    UIFamilyInfoToJSON,
     UIUserInfoFromJSON,
     UIUserInfoToJSON,
 } from '../models/index';
@@ -28,6 +31,32 @@ import {
 export class UIApi extends runtime.BaseAPI {
 
     /**
+     * Get session family info
+     */
+    async getFamilyInfoRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UIFamilyInfo>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/api/ui/familyInfo`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UIFamilyInfoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get session family info
+     */
+    async getFamilyInfo(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UIFamilyInfo> {
+        const response = await this.getFamilyInfoRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Get logged in user info
      */
     async getUserInfoRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UIUserInfo>> {
@@ -36,7 +65,7 @@ export class UIApi extends runtime.BaseAPI {
         const headerParameters: runtime.HTTPHeaders = {};
 
         const response = await this.request({
-            path: `/api/userInfo`,
+            path: `/api/ui/userInfo`,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,

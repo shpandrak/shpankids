@@ -61,6 +61,8 @@ func Start(
 		auth.GetUserInfo,
 		userManager,
 		task.NewTaskManager(fs, auth.GetUserInfo, familyManager, sessionManager),
+		familyManager,
+		sessionManager,
 	)
 	withStrictHandler := openapi.NewStrictHandlerWithOptions(apiImpl, nil, openapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
