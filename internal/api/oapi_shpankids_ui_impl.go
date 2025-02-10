@@ -35,7 +35,10 @@ func (oa *OapiServerApiImpl) GetUserInfo(
 	}, nil
 }
 
-func (oa *OapiServerApiImpl) GetFamilyInfo(ctx context.Context, request openapi.GetFamilyInfoRequestObject) (openapi.GetFamilyInfoResponseObject, error) {
+func (oa *OapiServerApiImpl) GetFamilyInfo(
+	ctx context.Context,
+	_ openapi.GetFamilyInfoRequestObject,
+) (openapi.GetFamilyInfoResponseObject, error) {
 	usrId, err := oa.userSessionManager(ctx)
 	if err != nil {
 		return nil, err
@@ -71,11 +74,25 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(ctx context.Context, request openapi.
 	if err != nil {
 		return nil, err
 	}
+
+	familyTasks, err := oa.familyManager.ListFamilyTasks(ctx, family.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	return openapi.GetFamilyInfo200JSONResponse{
 		AdminEmail:        openapitypes.Email(family.OwnerEmail),
 		FamilyDisplayName: family.Name,
 		FamilyUri:         family.Id,
 		Members:           uiFamilyMembers,
+		Tasks: functional.MapSliceNoErr(familyTasks, func(task shpankids.FamilyTaskDto) openapi.UIFamilyTask {
+			return openapi.UIFamilyTask{
+				Description: castutil.StrToStrPtr(task.Description),
+				Id:          task.TaskId,
+				MemberIds:   task.MemberIds,
+				Title:       task.Title,
+			}
+		}),
 	}, nil
 
 }

@@ -19,6 +19,12 @@ import {
     UIFamilyMemberFromJSONTyped,
     UIFamilyMemberToJSON,
 } from './UIFamilyMember';
+import type { UIFamilyTask } from './UIFamilyTask';
+import {
+    UIFamilyTaskFromJSON,
+    UIFamilyTaskFromJSONTyped,
+    UIFamilyTaskToJSON,
+} from './UIFamilyTask';
 
 /**
  * Family info
@@ -50,6 +56,12 @@ export interface UIFamilyInfo {
      * @memberof UIFamilyInfo
      */
     members: Array<UIFamilyMember>;
+    /**
+     * 
+     * @type {Array<UIFamilyTask>}
+     * @memberof UIFamilyInfo
+     */
+    tasks: Array<UIFamilyTask>;
 }
 
 /**
@@ -60,6 +72,7 @@ export function instanceOfUIFamilyInfo(value: object): boolean {
     if (!('familyUri' in value)) return false;
     if (!('familyDisplayName' in value)) return false;
     if (!('members' in value)) return false;
+    if (!('tasks' in value)) return false;
     return true;
 }
 
@@ -77,6 +90,7 @@ export function UIFamilyInfoFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'familyUri': json['familyUri'],
         'familyDisplayName': json['familyDisplayName'],
         'members': ((json['members'] as Array<any>).map(UIFamilyMemberFromJSON)),
+        'tasks': ((json['tasks'] as Array<any>).map(UIFamilyTaskFromJSON)),
     };
 }
 
@@ -90,6 +104,7 @@ export function UIFamilyInfoToJSON(value?: UIFamilyInfo | null): any {
         'familyUri': value['familyUri'],
         'familyDisplayName': value['familyDisplayName'],
         'members': ((value['members'] as Array<any>).map(UIFamilyMemberToJSON)),
+        'tasks': ((value['tasks'] as Array<any>).map(UIFamilyTaskToJSON)),
     };
 }
 

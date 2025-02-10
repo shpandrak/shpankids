@@ -41,7 +41,7 @@ func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([
 	if err != nil {
 		return nil, err
 	}
-	familyTasks, err := m.familyManager.FamilyTasks(ctx, s.FamilyId)
+	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId)
 	if err != nil {
 		return nil, err
 	}

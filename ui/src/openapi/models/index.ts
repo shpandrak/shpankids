@@ -6,4 +6,5 @@ export * from './ApiTaskStatus';
 export * from './ApiUpdateTaskStatusCommandArgs';
 export * from './UIFamilyInfo';
 export * from './UIFamilyMember';
+export * from './UIFamilyTask';
 export * from './UIUserInfo';

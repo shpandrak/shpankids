@@ -16,12 +16,19 @@ const FamilyPage: React.FC<FamilyPageProps> = (props) => {
 
     React.useEffect(() => {
         uiApi.getFamilyInfo()
-            .then(setFamilyInfo).then(() =>
-            setLoading(false)
-        )
+            .then(setFamilyInfo)
+            .then(() => setLoading(false))
             .catch(showError);
 
     }, []);
+
+    // create map of family members by email
+    const familyMembersByEmail = new Map<string, UIFamilyInfo["members"][0]>();
+    if (familyInfo) {
+        familyInfo!.members.forEach((member) => {
+            familyMembersByEmail.set(member.email, member);
+        });
+    }
 
     return (
         <div>
@@ -32,6 +39,22 @@ const FamilyPage: React.FC<FamilyPageProps> = (props) => {
                 <ul>
                     {familyInfo.members.map((member) => (
                         <li key={member.email}>{member.firstName} {member.lastName} ({member.role})</li>
+                    ))}
+                </ul>
+
+                <h3>Family tasks</h3>
+                <ul>
+                    {familyInfo.tasks
+                        .sort((a, b) => a.id.localeCompare(b.id))
+                        .map((task) => (
+                        <li key={task.id}>
+                            {task.title}&nbsp;
+                            ({task.memberIds
+                                .sort()
+                                .map((memberId) => familyMembersByEmail.get(memberId)?.firstName)
+                                .join(", ")
+                            })
+                        </li>
                     ))}
                 </ul>
 

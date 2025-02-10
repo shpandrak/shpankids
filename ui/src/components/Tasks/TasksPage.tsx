@@ -16,9 +16,8 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
     React.useEffect(() => {
         shpanKidsApi.listTasks()
             .then(tasks => tasks.sort((a, b) => a.id.localeCompare(b.id)))
-            .then(setTasks).then(() =>
-            setLoading(false)
-        )
+            .then(setTasks)
+            .then(() => setLoading(false))
             .catch(showError);
 
     }, [props.uiCtx]);

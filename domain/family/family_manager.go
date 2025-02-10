@@ -75,7 +75,7 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 		MemberIds:   familyTask.MemberIds,
 	})
 }
-func (m *Manager) FamilyTasks(ctx context.Context, familyId string) ([]shpankids.FamilyTaskDto, error) {
+func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) ([]shpankids.FamilyTaskDto, error) {
 	// Get the user email from the context
 	_, err := m.userSessionManager(ctx)
 	if err != nil {

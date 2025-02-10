@@ -96,6 +96,7 @@ components:
         - adminEmail
         - familyDisplayName
         - members
+        - tasks
       properties:
         adminEmail:
           type: string
@@ -103,20 +104,43 @@ components:
         familyUri:
           type: string
         familyDisplayName:
-            type: string
+          type: string
         members:
-            type: array
-            items:
-                $ref: '#/components/schemas/UIFamilyMember'
+          type: array
+          items:
+            $ref: '#/components/schemas/UIFamilyMember'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UIFamilyTask'
+
+    UIFamilyTask:
+      type: object
+      required:
+        - id
+        - title
+        - memberIds
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        memberIds:
+          type: array
+          items:
+            type: string
+
 
     UIFamilyMember:
       type: object
       description: Family member
       required:
-          - email
-          - firstName
-          - lastName
-          - role
+        - email
+        - firstName
+        - lastName
+        - role
       properties:
         email:
           type: string
@@ -129,10 +153,10 @@ components:
           $ref: '#/components/schemas/ApiFamilyRole'
 
     ApiFamilyRole:
-        type: string
-        enum:
-            - admin
-            - member
+      type: string
+      enum:
+        - admin
+        - member
     ApiTask:
       type: object
       description: Task

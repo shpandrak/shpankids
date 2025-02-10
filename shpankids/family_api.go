@@ -36,5 +36,5 @@ type FamilyManager interface {
 	CreateFamily(ctx context.Context, familyId string, familyName string, memberUserIds []string) error
 	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
-	FamilyTasks(ctx context.Context, familyId string) ([]FamilyTaskDto, error)
+	ListFamilyTasks(ctx context.Context, familyId string) ([]FamilyTaskDto, error)
 }
