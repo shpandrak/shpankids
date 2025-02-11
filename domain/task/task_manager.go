@@ -7,6 +7,7 @@ import (
 	"google.golang.org/api/iterator"
 	"shpankids/infra/util/functional"
 	"shpankids/shpankids"
+	"slices"
 	"time"
 )
 
@@ -46,13 +47,21 @@ func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([
 		return nil, err
 	}
 
-	tasks := functional.MapSliceNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) *shpankids.Task {
-		return &shpankids.Task{
+	tasks := functional.MapSliceWhileFilteringNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) **shpankids.Task {
+		if ft.Status != shpankids.FamilyTaskStatusActive {
+			return nil
+		}
+		if !slices.ContainsFunc(ft.MemberIds, func(memberId string) bool {
+			return memberId == *userId
+		}) {
+			return nil
+		}
+		return functional.ValueToPointer(&shpankids.Task{
 			Id:          ft.TaskId,
 			Title:       ft.Title,
 			Description: ft.Description,
 			Status:      shpankids.StatusOpen,
-		}
+		})
 	})
 
 	tasksById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Task) string {
