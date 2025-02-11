@@ -57,18 +57,19 @@ const FamilyPage: React.FC<FamilyPageProps> = (props) => {
                                     .map((memberId) => familyMembersByEmail.get(memberId)?.firstName)
                                     .join(", ")
                                 })
+
+                                    <button onClick={() => {
+                                        shpanKidsApi.deleteFamilyTask({apiDeleteFamilyTaskCommandArgs: {taskId: task.id}})
+                                            .then(() => {
+                                                uiApi.getFamilyInfo()
+                                                    .then(setFamilyInfo)
+                                            })
+                                            .catch(showError)
+                                    }}>Delete
+                                    </button>
                                 </li>
-                                <button onClick={() => {
-                                    shpanKidsApi.deleteFamilyTask({apiDeleteFamilyTaskCommandArgs: {taskId: task.id}})
-                                        .then(() => {
-                                            uiApi.getFamilyInfo()
-                                                .then(setFamilyInfo)
-                                        })
-                                        .catch(showError)
-                                }}>Delete
-                                </button>
                             </>
-                    ))}
+                        ))}
                 </ul>
 
                 <button onClick={() => {

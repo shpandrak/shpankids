@@ -10,6 +10,9 @@ import (
 const shpanUserId = "shpandrak@gmail.com"
 const shpanFamilyId = "shpanFamily"
 const peteUserId = "pete.lieberman.real@gmail.com"
+const alexUserId = "alex.lieberman.matu@gmail.com"
+const charlotteUserId = "alma.lieberman@gmail.com"
+const nemalaUserId = "yael.peer@gmail.com"
 
 func appBootstrap(
 	userManager shpankids.UserManager,
@@ -30,6 +33,24 @@ func appBootstrap(
 			LastName:  "Lieberman",
 			BirthDate: time.Date(2016, 9, 7, 0, 0, 0, 0, time.UTC),
 		},
+		{
+			Email:     alexUserId,
+			FirstName: "Alex",
+			LastName:  "Lieberman",
+			BirthDate: time.Date(2016, 9, 7, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Email:     charlotteUserId,
+			FirstName: "Alma Charlotte",
+			LastName:  "Lieberman",
+			BirthDate: time.Date(2012, 8, 21, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Email:     nemalaUserId,
+			FirstName: "Yael",
+			LastName:  "Lieberman",
+			BirthDate: time.Date(1982, 6, 15, 0, 0, 0, 0, time.UTC),
+		},
 	}
 
 	// Create the default family
@@ -46,40 +67,55 @@ func appBootstrap(
 			"Lieberman Family",
 			[]string{
 				peteUserId,
+				charlotteUserId,
+				alexUserId,
+			},
+			[]string{
+				shpanUserId,
+				nemalaUserId,
 			},
 		)
 		if err != nil {
 			return err
 		}
 
-		// Create default tasks for the family
-		err = familyManager.CreateFamilyTask(
-			bootstrapCtx,
-			shpanFamilyId,
-			shpankids.FamilyTaskDto{
+		defaultFamilyTasks := []shpankids.FamilyTaskDto{
+			{
 				TaskId:      "task1",
-				Title:       "Do Homework",
+				Title:       "להכין שעורי בית",
 				Description: "Do your homework",
-				MemberIds:   []string{peteUserId, shpanUserId},
+				MemberIds:   []string{peteUserId, alexUserId, charlotteUserId},
 			},
-		)
-		if err != nil {
-			return err
-		}
-		err = familyManager.CreateFamilyTask(
-			bootstrapCtx,
-			shpanFamilyId,
-			shpankids.FamilyTaskDto{
+			{
 				TaskId:      "task2",
-				Title:       "Take out your lunch box",
+				Title:       "להוציא קופסאת אוכל",
 				Description: "Lunch box -> dishwasher",
-				MemberIds:   []string{peteUserId, shpanUserId},
+				MemberIds:   []string{peteUserId, alexUserId, charlotteUserId},
 			},
-		)
-		if err != nil {
-			return err
+			{
+				TaskId:    "task3",
+				Title:     "לנגן",
+				MemberIds: []string{peteUserId},
+			},
+			{
+				TaskId:    "task4",
+				Title:     "דואולינגו",
+				MemberIds: []string{charlotteUserId},
+			},
 		}
 
+		for _, currTask := range defaultFamilyTasks {
+			// Create default tasks for the family
+			err = familyManager.CreateFamilyTask(
+				bootstrapCtx,
+				shpanFamilyId,
+				currTask,
+			)
+			if err != nil {
+				return err
+			}
+
+		}
 	}
 
 	for _, currDefaultUser := range defaultUsers {
