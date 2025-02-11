@@ -30,11 +30,21 @@ type FamilyTaskDto struct {
 	Title       string
 	Description string
 	MemberIds   []string
+	Status      FamilyTaskStatus
+	StatusDate  time.Time
 }
+
+type FamilyTaskStatus string
+
+const (
+	FamilyTaskStatusActive  FamilyTaskStatus = "active"
+	FamilyTaskStatusDeleted FamilyTaskStatus = "deleted"
+)
 
 type FamilyManager interface {
 	CreateFamily(ctx context.Context, familyId string, familyName string, memberUserIds []string) error
 	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 	ListFamilyTasks(ctx context.Context, familyId string) ([]FamilyTaskDto, error)
+	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
 }

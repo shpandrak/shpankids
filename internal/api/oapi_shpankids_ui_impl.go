@@ -85,12 +85,16 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(
 		FamilyDisplayName: family.Name,
 		FamilyUri:         family.Id,
 		Members:           uiFamilyMembers,
-		Tasks: functional.MapSliceNoErr(familyTasks, func(task shpankids.FamilyTaskDto) openapi.UIFamilyTask {
-			return openapi.UIFamilyTask{
-				Description: castutil.StrToStrPtr(task.Description),
-				Id:          task.TaskId,
-				MemberIds:   task.MemberIds,
-				Title:       task.Title,
+		Tasks: functional.MapSliceWhileFilteringNoErr(familyTasks, func(task shpankids.FamilyTaskDto) *openapi.UIFamilyTask {
+			if task.Status == shpankids.FamilyTaskStatusActive {
+				return &openapi.UIFamilyTask{
+					Description: castutil.StrToStrPtr(task.Description),
+					Id:          task.TaskId,
+					MemberIds:   task.MemberIds,
+					Title:       task.Title,
+				}
+			} else {
+				return nil
 			}
 		}),
 	}, nil
