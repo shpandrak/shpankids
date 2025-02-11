@@ -33,7 +33,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UIFamilyInfo'
 
-  /api/commands/updateTaskStatus:
+  /api/commands/update-task-status:
     post:
       tags:
         - shpankids
@@ -44,6 +44,51 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ApiUpdateTaskStatusCommandArgs'
+      responses:
+        '200':
+          description: OK
+
+  /api/commands/create-family-task:
+    post:
+      tags:
+        - shpankids
+      description: Create Family Task
+      operationId: createFamilyTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiCreateFamilyTaskCommandArgs'
+      responses:
+        '200':
+          description: OK
+
+  /api/commands/delete-family-task:
+    post:
+      tags:
+        - shpankids
+      description: Delete Family Task
+      operationId: deleteFamilyTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiDeleteFamilyTaskCommandArgs'
+      responses:
+        '200':
+          description: OK
+
+  /api/commands/update-family-task:
+    post:
+      tags:
+        - shpankids
+      description: Update Family Task
+      operationId: updateFamilyTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiUpdateFamilyTaskCommandArgs'
       responses:
         '200':
           description: OK
@@ -206,4 +251,42 @@ components:
         status:
           $ref: '#/components/schemas/ApiTaskStatus'
         comment:
+          type: string
+
+    ApiCreateFamilyTaskCommandArgs:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          $ref: '#/components/schemas/ApiFamilyTask'
+
+    ApiFamilyTask:
+      type: object
+      required:
+        - id
+        - title
+        - memberIds
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        memberIds:
+          type: array
+          items:
+            type: string
+    ApiUpdateFamilyTaskCommandArgs:
+      type: object
+      required:
+        - task
+      properties:
+        task:
+          $ref: '#/components/schemas/ApiFamilyTask'
+    ApiDeleteFamilyTaskCommandArgs:
+      type: object
+      required:
+        - taskId
+      properties:
+        taskId:
           type: string

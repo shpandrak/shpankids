@@ -36,8 +36,25 @@ const (
 	Open       ApiTaskStatus = "open"
 )
 
+// ApiCreateFamilyTaskCommandArgs defines model for ApiCreateFamilyTaskCommandArgs.
+type ApiCreateFamilyTaskCommandArgs struct {
+	Task ApiFamilyTask `json:"task"`
+}
+
+// ApiDeleteFamilyTaskCommandArgs defines model for ApiDeleteFamilyTaskCommandArgs.
+type ApiDeleteFamilyTaskCommandArgs struct {
+	TaskId string `json:"taskId"`
+}
+
 // ApiFamilyRole defines model for ApiFamilyRole.
 type ApiFamilyRole string
+
+// ApiFamilyTask defines model for ApiFamilyTask.
+type ApiFamilyTask struct {
+	Description *string  `json:"description,omitempty"`
+	MemberIds   []string `json:"memberIds"`
+	Title       string   `json:"title"`
+}
 
 // ApiTask Task
 type ApiTask struct {
@@ -51,6 +68,11 @@ type ApiTask struct {
 
 // ApiTaskStatus defines model for ApiTaskStatus.
 type ApiTaskStatus string
+
+// ApiUpdateFamilyTaskCommandArgs defines model for ApiUpdateFamilyTaskCommandArgs.
+type ApiUpdateFamilyTaskCommandArgs struct {
+	Task ApiFamilyTask `json:"task"`
+}
 
 // ApiUpdateTaskStatusCommandArgs defines model for ApiUpdateTaskStatusCommandArgs.
 type ApiUpdateTaskStatusCommandArgs struct {
@@ -94,13 +116,31 @@ type UIUserInfo struct {
 	LastName          *string             `json:"lastName,omitempty"`
 }
 
+// CreateFamilyTaskJSONRequestBody defines body for CreateFamilyTask for application/json ContentType.
+type CreateFamilyTaskJSONRequestBody = ApiCreateFamilyTaskCommandArgs
+
+// DeleteFamilyTaskJSONRequestBody defines body for DeleteFamilyTask for application/json ContentType.
+type DeleteFamilyTaskJSONRequestBody = ApiDeleteFamilyTaskCommandArgs
+
+// UpdateFamilyTaskJSONRequestBody defines body for UpdateFamilyTask for application/json ContentType.
+type UpdateFamilyTaskJSONRequestBody = ApiUpdateFamilyTaskCommandArgs
+
 // UpdateTaskStatusJSONRequestBody defines body for UpdateTaskStatus for application/json ContentType.
 type UpdateTaskStatusJSONRequestBody = ApiUpdateTaskStatusCommandArgs
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (POST /api/commands/updateTaskStatus)
+	// (POST /api/commands/create-family-task)
+	CreateFamilyTask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/delete-family-task)
+	DeleteFamilyTask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/update-family-task)
+	UpdateFamilyTask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/tasks)
@@ -121,6 +161,51 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CreateFamilyTask operation middleware
+func (siw *ServerInterfaceWrapper) CreateFamilyTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFamilyTask(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteFamilyTask operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFamilyTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteFamilyTask(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// UpdateFamilyTask operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFamilyTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFamilyTask(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // UpdateTaskStatus operation middleware
 func (siw *ServerInterfaceWrapper) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
@@ -295,7 +380,13 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	r.HandleFunc(options.BaseURL+"/api/commands/updateTaskStatus", wrapper.UpdateTaskStatus).Methods("POST")
+	r.HandleFunc(options.BaseURL+"/api/commands/create-family-task", wrapper.CreateFamilyTask).Methods("POST")
+
+	r.HandleFunc(options.BaseURL+"/api/commands/delete-family-task", wrapper.DeleteFamilyTask).Methods("POST")
+
+	r.HandleFunc(options.BaseURL+"/api/commands/update-family-task", wrapper.UpdateFamilyTask).Methods("POST")
+
+	r.HandleFunc(options.BaseURL+"/api/commands/update-task-status", wrapper.UpdateTaskStatus).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/tasks", wrapper.ListTasks).Methods("GET")
 
@@ -304,6 +395,54 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 	r.HandleFunc(options.BaseURL+"/api/ui/userInfo", wrapper.GetUserInfo).Methods("GET")
 
 	return r
+}
+
+type CreateFamilyTaskRequestObject struct {
+	Body *CreateFamilyTaskJSONRequestBody
+}
+
+type CreateFamilyTaskResponseObject interface {
+	VisitCreateFamilyTaskResponse(w http.ResponseWriter) error
+}
+
+type CreateFamilyTask200Response struct {
+}
+
+func (response CreateFamilyTask200Response) VisitCreateFamilyTaskResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type DeleteFamilyTaskRequestObject struct {
+	Body *DeleteFamilyTaskJSONRequestBody
+}
+
+type DeleteFamilyTaskResponseObject interface {
+	VisitDeleteFamilyTaskResponse(w http.ResponseWriter) error
+}
+
+type DeleteFamilyTask200Response struct {
+}
+
+func (response DeleteFamilyTask200Response) VisitDeleteFamilyTaskResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type UpdateFamilyTaskRequestObject struct {
+	Body *UpdateFamilyTaskJSONRequestBody
+}
+
+type UpdateFamilyTaskResponseObject interface {
+	VisitUpdateFamilyTaskResponse(w http.ResponseWriter) error
+}
+
+type UpdateFamilyTask200Response struct {
+}
+
+func (response UpdateFamilyTask200Response) VisitUpdateFamilyTaskResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
 }
 
 type UpdateTaskStatusRequestObject struct {
@@ -373,7 +512,16 @@ func (response GetUserInfo200JSONResponse) VisitGetUserInfoResponse(w http.Respo
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (POST /api/commands/updateTaskStatus)
+	// (POST /api/commands/create-family-task)
+	CreateFamilyTask(ctx context.Context, request CreateFamilyTaskRequestObject) (CreateFamilyTaskResponseObject, error)
+
+	// (POST /api/commands/delete-family-task)
+	DeleteFamilyTask(ctx context.Context, request DeleteFamilyTaskRequestObject) (DeleteFamilyTaskResponseObject, error)
+
+	// (POST /api/commands/update-family-task)
+	UpdateFamilyTask(ctx context.Context, request UpdateFamilyTaskRequestObject) (UpdateFamilyTaskResponseObject, error)
+
+	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(ctx context.Context, request UpdateTaskStatusRequestObject) (UpdateTaskStatusResponseObject, error)
 
 	// (GET /api/tasks)
@@ -413,6 +561,99 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// CreateFamilyTask operation middleware
+func (sh *strictHandler) CreateFamilyTask(w http.ResponseWriter, r *http.Request) {
+	var request CreateFamilyTaskRequestObject
+
+	var body CreateFamilyTaskJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFamilyTask(ctx, request.(CreateFamilyTaskRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFamilyTask")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateFamilyTaskResponseObject); ok {
+		if err := validResponse.VisitCreateFamilyTaskResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteFamilyTask operation middleware
+func (sh *strictHandler) DeleteFamilyTask(w http.ResponseWriter, r *http.Request) {
+	var request DeleteFamilyTaskRequestObject
+
+	var body DeleteFamilyTaskJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFamilyTask(ctx, request.(DeleteFamilyTaskRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFamilyTask")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteFamilyTaskResponseObject); ok {
+		if err := validResponse.VisitDeleteFamilyTaskResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateFamilyTask operation middleware
+func (sh *strictHandler) UpdateFamilyTask(w http.ResponseWriter, r *http.Request) {
+	var request UpdateFamilyTaskRequestObject
+
+	var body UpdateFamilyTaskJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateFamilyTask(ctx, request.(UpdateFamilyTaskRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateFamilyTask")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateFamilyTaskResponseObject); ok {
+		if err := validResponse.VisitUpdateFamilyTaskResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // UpdateTaskStatus operation middleware
@@ -521,19 +762,21 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

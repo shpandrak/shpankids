@@ -42,8 +42,8 @@ func (kvs *kvsImpl) CreateSpaceStore(_ context.Context, spaceHierarchy []string)
 	// for each pair of docId, collection id create new collection reference
 	documentRef := kvs.parentDocument
 	for i := 0; i < len(spaceHierarchy); i += 2 {
-		docId := spaceHierarchy[i]
-		colId := spaceHierarchy[i+1]
+		colId := spaceHierarchy[i]
+		docId := spaceHierarchy[i+1]
 		if documentRef == nil {
 			documentRef = kvs.client.Collection(colId).Doc(docId)
 		} else {

@@ -346,6 +346,16 @@ func SliceToSet[S comparable](slc []S) map[S]bool {
 	}
 	return ret
 }
+func SliceToSetExtractKeyNoErr[KEY comparable, V any](slc []V, keyExtractor MapFuncNoErr[V, KEY]) map[KEY]bool {
+	if slc == nil {
+		return map[KEY]bool{}
+	}
+	ret := make(map[KEY]bool, len(slc))
+	for _, currValue := range slc {
+		ret[keyExtractor(currValue)] = true
+	}
+	return ret
+}
 
 func SliceToMapKeyAndValue[K comparable, S any, V any](slc []S, keyExtractor MapFuncNoErr[S, K], valueExtractor MapFunc[S, V]) (map[K]V, error) {
 	if slc == nil {

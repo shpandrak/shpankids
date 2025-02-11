@@ -15,15 +15,36 @@
 
 import * as runtime from '../runtime';
 import type {
+  ApiCreateFamilyTaskCommandArgs,
+  ApiDeleteFamilyTaskCommandArgs,
   ApiTask,
+  ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
 } from '../models/index';
 import {
+    ApiCreateFamilyTaskCommandArgsFromJSON,
+    ApiCreateFamilyTaskCommandArgsToJSON,
+    ApiDeleteFamilyTaskCommandArgsFromJSON,
+    ApiDeleteFamilyTaskCommandArgsToJSON,
     ApiTaskFromJSON,
     ApiTaskToJSON,
+    ApiUpdateFamilyTaskCommandArgsFromJSON,
+    ApiUpdateFamilyTaskCommandArgsToJSON,
     ApiUpdateTaskStatusCommandArgsFromJSON,
     ApiUpdateTaskStatusCommandArgsToJSON,
 } from '../models/index';
+
+export interface CreateFamilyTaskRequest {
+    apiCreateFamilyTaskCommandArgs?: ApiCreateFamilyTaskCommandArgs;
+}
+
+export interface DeleteFamilyTaskRequest {
+    apiDeleteFamilyTaskCommandArgs?: ApiDeleteFamilyTaskCommandArgs;
+}
+
+export interface UpdateFamilyTaskRequest {
+    apiUpdateFamilyTaskCommandArgs?: ApiUpdateFamilyTaskCommandArgs;
+}
 
 export interface UpdateTaskStatusRequest {
     apiUpdateTaskStatusCommandArgs?: ApiUpdateTaskStatusCommandArgs;
@@ -33,6 +54,62 @@ export interface UpdateTaskStatusRequest {
  * 
  */
 export class ShpankidsApi extends runtime.BaseAPI {
+
+    /**
+     * Create Family Task
+     */
+    async createFamilyTaskRaw(requestParameters: CreateFamilyTaskRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/create-family-task`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiCreateFamilyTaskCommandArgsToJSON(requestParameters['apiCreateFamilyTaskCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Create Family Task
+     */
+    async createFamilyTask(requestParameters: CreateFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.createFamilyTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Delete Family Task
+     */
+    async deleteFamilyTaskRaw(requestParameters: DeleteFamilyTaskRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/delete-family-task`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiDeleteFamilyTaskCommandArgsToJSON(requestParameters['apiDeleteFamilyTaskCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Family Task
+     */
+    async deleteFamilyTask(requestParameters: DeleteFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteFamilyTaskRaw(requestParameters, initOverrides);
+    }
 
     /**
      * list Tasks
@@ -61,6 +138,34 @@ export class ShpankidsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Update Family Task
+     */
+    async updateFamilyTaskRaw(requestParameters: UpdateFamilyTaskRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/update-family-task`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiUpdateFamilyTaskCommandArgsToJSON(requestParameters['apiUpdateFamilyTaskCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Update Family Task
+     */
+    async updateFamilyTask(requestParameters: UpdateFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.updateFamilyTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
      * Update Task Status
      */
     async updateTaskStatusRaw(requestParameters: UpdateTaskStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -71,7 +176,7 @@ export class ShpankidsApi extends runtime.BaseAPI {
         headerParameters['Content-Type'] = 'application/json';
 
         const response = await this.request({
-            path: `/api/commands/updateTaskStatus`,
+            path: `/api/commands/update-task-status`,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
