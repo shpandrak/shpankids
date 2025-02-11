@@ -152,12 +152,32 @@ func (m *Manager) CreateFamily(
 	familyId string,
 	familyName string,
 	memberUserIds []string,
+	adminUserIds []string,
 ) error {
 	// Get the user email from the context
 	loggedInUserEmail, err := m.userSessionManager(ctx)
 	if err != nil {
 		return err
 	}
+
+	famMembersByUserId := map[string]dbFamilyMember{}
+	famMembersByUserId[*loggedInUserEmail] = dbFamilyMember{
+		UserId: *loggedInUserEmail,
+		Role:   shpankids.RoleAdmin,
+	}
+	for _, memberId := range memberUserIds {
+		famMembersByUserId[memberId] = dbFamilyMember{
+			UserId: memberId,
+			Role:   shpankids.RoleMember,
+		}
+	}
+	for _, adminId := range adminUserIds {
+		famMembersByUserId[adminId] = dbFamilyMember{
+			UserId: adminId,
+			Role:   shpankids.RoleAdmin,
+		}
+	}
+
 	// Create the family in repo
 	return m.familyRepository.Set(
 		ctx,
@@ -167,17 +187,7 @@ func (m *Manager) CreateFamily(
 			Name:      familyName,
 			CreatedBy: *loggedInUserEmail,
 			CreatedAt: time.Now(),
-			Members: append([]dbFamilyMember{
-				{
-					UserId: *loggedInUserEmail,
-					Role:   shpankids.RoleAdmin,
-				},
-			}, functional.MapSliceNoErr(memberUserIds, func(userId string) dbFamilyMember {
-				return dbFamilyMember{
-					UserId: userId,
-					Role:   shpankids.RoleMember,
-				}
-			})...),
+			Members:   functional.MapValues(famMembersByUserId),
 		},
 	)
 }
