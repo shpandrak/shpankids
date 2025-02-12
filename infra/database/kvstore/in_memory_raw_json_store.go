@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"shpankids/infra/shpanstream"
+	"shpankids/infra/util/functional"
 	"shpankids/internal/infra/util"
 	"sync"
 )
@@ -13,6 +15,25 @@ type InMemoryRawJsonStore struct {
 	mu                sync.RWMutex
 	store             map[string]map[string]json.RawMessage
 	spacesBySpaceName map[string]*InMemoryRawJsonStore
+}
+
+func (s *InMemoryRawJsonStore) StreamAllNamespaces(_ context.Context) shpanstream.Stream[string] {
+	return shpanstream.Just(functional.MapKeys(s.store)...)
+}
+
+func (s *InMemoryRawJsonStore) StreamAllJson(
+	_ context.Context,
+	namespace string,
+) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.store[namespace] == nil {
+		return shpanstream.EmptyStream[functional.Entry[string, json.RawMessage]]()
+	}
+	return shpanstream.Just[functional.Entry[string, json.RawMessage]](functional.MapToSliceNoErr(s.store[namespace], func(k string, v json.RawMessage) functional.Entry[string, json.RawMessage] {
+		return functional.Entry[string, json.RawMessage]{Key: k, Value: v}
+	})...)
+
 }
 
 func (s *InMemoryRawJsonStore) CreateSpaceStore(_ context.Context, spaceHierarchy []string) (RawJsonStore, error) {

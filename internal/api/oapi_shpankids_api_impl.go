@@ -13,7 +13,7 @@ import (
 type OapiServerApiImpl struct {
 	userSessionManager shpankids.UserSessionManager
 	userManager        shpankids.UserManager
-	taskManager        shpankids.Manager
+	taskManager        shpankids.TaskManager
 	familyManager      shpankids.FamilyManager
 	sessionManager     shpankids.SessionManager
 }
@@ -52,7 +52,7 @@ func (oa *OapiServerApiImpl) GetStats(ctx context.Context, request openapi.GetSt
 func NewOapiServerApiImpl(
 	userSessionManager shpankids.UserSessionManager,
 	userManager shpankids.UserManager,
-	taskManager shpankids.Manager,
+	taskManager shpankids.TaskManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
 

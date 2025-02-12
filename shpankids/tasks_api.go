@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-type Status string
+type TaskStatus string
 
 const (
-	StatusOpen       Status = "open"
-	StatusDone       Status = "done"
-	StatusBlocked    Status = "blocked"
-	StatusIrrelevant Status = "irrelevant"
+	StatusOpen       TaskStatus = "open"
+	StatusDone       TaskStatus = "done"
+	StatusBlocked    TaskStatus = "blocked"
+	StatusIrrelevant TaskStatus = "irrelevant"
 )
 
 type Task struct {
@@ -19,7 +19,7 @@ type Task struct {
 	Title       string
 	Description string
 	DueDate     time.Time
-	Status      Status
+	Status      TaskStatus
 }
 
 type TaskStats struct {
@@ -29,8 +29,8 @@ type TaskStats struct {
 	DoneTasksCount  int
 }
 
-type Manager interface {
+type TaskManager interface {
 	GetTasksForDate(ctx context.Context, date time.Time) ([]Task, error)
 	GetTaskStats(ctx context.Context, fromDate time.Time, toDate time.Time) ([]TaskStats, error)
-	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status Status, comment string) error
+	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status TaskStatus, comment string) error
 }

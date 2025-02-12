@@ -3,8 +3,8 @@ package task
 import (
 	"cloud.google.com/go/firestore"
 	"context"
-	"errors"
-	"google.golang.org/api/iterator"
+	"shpankids/infra/database/datekvs"
+	"shpankids/infra/database/kvstore"
 	"shpankids/infra/util/functional"
 	"shpankids/shpankids"
 	"slices"
@@ -13,6 +13,7 @@ import (
 
 type managerImpl struct {
 	fs                 *firestore.Client
+	kvs                kvstore.RawJsonStore
 	userSessionManager shpankids.UserSessionManager
 	sessionManager     shpankids.SessionManager
 	familyManager      shpankids.FamilyManager
@@ -20,12 +21,14 @@ type managerImpl struct {
 
 func NewTaskManager(
 	fs *firestore.Client,
+	kvs kvstore.RawJsonStore,
 	userSessionManager shpankids.UserSessionManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
-) shpankids.Manager {
+) shpankids.TaskManager {
 	return &managerImpl{
 		fs:                 fs,
+		kvs:                kvs,
 		userSessionManager: userSessionManager,
 		familyManager:      familyManager,
 		sessionManager:     sessionManager,
@@ -39,6 +42,9 @@ func (m *managerImpl) GetTaskStats(ctx context.Context, fromDate time.Time, toDa
 		return nil, err
 	}
 	s, err := m.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
 
 	f, err := m.familyManager.GetFamily(ctx, s.FamilyId)
 	if err != nil {
@@ -126,50 +132,40 @@ func (m *managerImpl) filterTasksByUser(ctx context.Context, forDate time.Time, 
 	tasksById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Task) string {
 		return t.Id
 	})
-	docIter := m.fs.
-		Collection("users").
-		Doc(userId).
-		Collection("tasks-" + forDate.Format(time.DateOnly)).
-		Documents(ctx)
 
-	for {
-		doc, err := docIter.Next()
-		if err != nil {
-			if !errors.Is(err, iterator.Done) {
-				return nil, err
-			}
-			break
-		}
-		foundTask, found := tasksById[doc.Ref.ID]
+	userTaskRepo, err := NewUserTaskStatusRepository(ctx, m.kvs, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = userTaskRepo.GetAllForDate(ctx, *datekvs.NewDateFromTime(forDate)).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
+		foundTask, found := tasksById[dr.Key]
 		if found {
-			stsStr, ok := doc.Data()["status"]
-			if ok {
-				foundTask.Status = shpankids.Status(stsStr.(string))
-			}
+			foundTask.Status = dr.Value.Status
 		}
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return functional.MapSliceUnPtr(functional.MapValues(tasksById)), nil
 }
 
-func (m *managerImpl) UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status shpankids.Status, comment string) error {
+func (m *managerImpl) UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status shpankids.TaskStatus, comment string) error {
 	userId, err := m.userSessionManager(ctx)
 	if err != nil {
 		return err
 	}
 
-	data := map[string]interface{}{
-		"status": status,
+	tsr, err := NewUserTaskStatusRepository(ctx, m.kvs, *userId)
+	if err != nil {
+		return err
 	}
-	if comment != "" {
-		data["comment"] = comment
-	}
-	_, err = m.fs.
-		Collection("users").
-		Doc(*userId).
-		Collection("tasks-"+forDay.Format(time.DateOnly)).
-		Doc(taskId).
-		Set(ctx, data)
-	return err
+
+	return tsr.Set(ctx, *datekvs.NewDateFromTime(forDay), taskId, dbUserTaskStatus{
+		Comment:    comment,
+		Status:     status,
+		StatusTime: time.Now(),
+	})
 
 }

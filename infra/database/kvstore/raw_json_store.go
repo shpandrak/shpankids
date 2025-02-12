@@ -3,6 +3,8 @@ package kvstore
 import (
 	"context"
 	"encoding/json"
+	"shpankids/infra/shpanstream"
+	"shpankids/infra/util/functional"
 )
 
 type RawJsonStore interface {
@@ -26,4 +28,8 @@ type RawJsonStore interface {
 
 	// ListAllJSON returns a slice of all JSON objects stored in the store for a given namespace
 	ListAllJSON(ctx context.Context, namespace string) (map[string]json.RawMessage, error)
+
+	StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]]
+
+	StreamAllNamespaces(ctx context.Context) shpanstream.Stream[string]
 }

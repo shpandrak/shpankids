@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/fileutil"
+	"shpankids/infra/util/functional"
 	"strings"
 	"sync"
 )
@@ -18,6 +20,36 @@ type FileSystemRawJsonStore struct {
 	rootDir        string
 	filenamePrefix string
 	mu             sync.RWMutex
+}
+
+func (s *FileSystemRawJsonStore) StreamAllNamespaces(_ context.Context) shpanstream.Stream[string] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	//todo:amit: do proper streaming, can do with scanner much nicer
+	files, err := os.ReadDir(s.rootDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return shpanstream.EmptyStream[string]()
+		}
+		return shpanstream.NewErrorStream[string](err)
+	}
+	return shpanstream.Just(functional.MapSliceNoErr(files, func(file os.DirEntry) string {
+		return file.Name()
+	})...)
+
+}
+
+func (s *FileSystemRawJsonStore) StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
+	// todo: do proper streaming
+
+	allJSON, err := s.ListAllJSON(ctx, namespace)
+	if err != nil {
+		return shpanstream.NewErrorStream[functional.Entry[string, json.RawMessage]](err)
+	}
+	return shpanstream.Just[functional.Entry[string, json.RawMessage]](functional.MapToSliceNoErr(allJSON, func(k string, v json.RawMessage) functional.Entry[string, json.RawMessage] {
+		return functional.Entry[string, json.RawMessage]{Key: k, Value: v}
+	})...)
 }
 
 func (s *FileSystemRawJsonStore) CreateSpaceStore(_ context.Context, spaceHierarchy []string) (RawJsonStore, error) {
