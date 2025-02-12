@@ -5,6 +5,7 @@ export * from './ApiDeleteFamilyTaskCommandArgs';
 export * from './ApiFamilyRole';
 export * from './ApiFamilyTask';
 export * from './ApiTask';
+export * from './ApiTaskStats';
 export * from './ApiTaskStatus';
 export * from './ApiUpdateFamilyTaskCommandArgs';
 export * from './ApiUpdateTaskStatusCommandArgs';

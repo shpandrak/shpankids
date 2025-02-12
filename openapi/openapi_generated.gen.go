@@ -18,6 +18,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gorilla/mux"
+	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -64,6 +65,14 @@ type ApiTask struct {
 	Id          string        `json:"id"`
 	Status      ApiTaskStatus `json:"status"`
 	Title       string        `json:"title"`
+}
+
+// ApiTaskStats defines model for ApiTaskStats.
+type ApiTaskStats struct {
+	DoneTasksCount  int       `json:"doneTasksCount"`
+	ForDate         time.Time `json:"forDate"`
+	TotalTasksCount int       `json:"totalTasksCount"`
+	UserId          string    `json:"userId"`
 }
 
 // ApiTaskStatus defines model for ApiTaskStatus.
@@ -116,6 +125,15 @@ type UIUserInfo struct {
 	LastName          *string             `json:"lastName,omitempty"`
 }
 
+// GetStatsParams defines parameters for GetStats.
+type GetStatsParams struct {
+	// From From date
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To To date
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // CreateFamilyTaskJSONRequestBody defines body for CreateFamilyTask for application/json ContentType.
 type CreateFamilyTaskJSONRequestBody = ApiCreateFamilyTaskCommandArgs
 
@@ -142,6 +160,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(w http.ResponseWriter, r *http.Request)
+
+	// (GET /api/stats)
+	GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams)
 
 	// (GET /api/tasks)
 	ListTasks(w http.ResponseWriter, r *http.Request)
@@ -213,6 +234,42 @@ func (siw *ServerInterfaceWrapper) UpdateTaskStatus(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateTaskStatus(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetStats operation middleware
+func (siw *ServerInterfaceWrapper) GetStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStatsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", r.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", r.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStats(w, r, params)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -388,6 +445,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-task-status", wrapper.UpdateTaskStatus).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/stats", wrapper.GetStats).Methods("GET")
+
 	r.HandleFunc(options.BaseURL+"/api/tasks", wrapper.ListTasks).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/api/ui/familyInfo", wrapper.GetFamilyInfo).Methods("GET")
@@ -461,6 +520,23 @@ func (response UpdateTaskStatus200Response) VisitUpdateTaskStatusResponse(w http
 	return nil
 }
 
+type GetStatsRequestObject struct {
+	Params GetStatsParams
+}
+
+type GetStatsResponseObject interface {
+	VisitGetStatsResponse(w http.ResponseWriter) error
+}
+
+type GetStats200JSONResponse []ApiTaskStats
+
+func (response GetStats200JSONResponse) VisitGetStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListTasksRequestObject struct {
 }
 
@@ -523,6 +599,9 @@ type StrictServerInterface interface {
 
 	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(ctx context.Context, request UpdateTaskStatusRequestObject) (UpdateTaskStatusResponseObject, error)
+
+	// (GET /api/stats)
+	GetStats(ctx context.Context, request GetStatsRequestObject) (GetStatsResponseObject, error)
 
 	// (GET /api/tasks)
 	ListTasks(ctx context.Context, request ListTasksRequestObject) (ListTasksResponseObject, error)
@@ -687,6 +766,32 @@ func (sh *strictHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetStats operation middleware
+func (sh *strictHandler) GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams) {
+	var request GetStatsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStats(ctx, request.(GetStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStats")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStatsResponseObject); ok {
+		if err := validResponse.VisitGetStatsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListTasks operation middleware
 func (sh *strictHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	var request ListTasksRequestObject
@@ -762,21 +867,23 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8xXy27bOhD9FYH3LuU493bnnZu0gZC+UMerIAtGHDuMxUdJOoAR6N8LkpL1olTJrYus",
-	"YvExM+fMDOfkFaWCScGBG40Wr0inT8Cw+7mU9EoBNvARM5od7rDeXQnGMCdLtXUnpBISlKHgvgzWO/v3",
-	"XwUbtED/zCvL88LsfClpZQ3leYwU/NhTBQQt7r2FhxiZgwS0QOLxGVKD8tiGcg0ZTAolIe6XN6WNonwb",
-	"dJiQPpfe2XeRgbUEfM/sHUwY5ShGDNgjqNrd0kft7l1BSTM6AjpVVBoqeCDE0nJC3GFqgOngsWIBK4UP",
-	"7psaH+kwZkpQebbuqoeDEkEjZuRW44mwyB6usXERboRi2KAFItjAzFBmY+lc2Ag17QIlQcfaYLPXI0rT",
-	"wlr5wyfyWefg6LhCMkDy6hhkWWhCgjVCBLeWHzOR7sD6okpBBi+Ym77iW0vyVtrWh1IBHAwlFYwBN8Ek",
-	"Ti6GU7M+7emoAjt6DDGxTjx/Cd+Ibjv5vYjazXZXuefmA8M0a0AHtxJqGmfrmmqZ4cMXzCDMpju1VnTg",
-	"AWo+P0Mklug++ycx9DZhvZtuz1db21orERWUuE5WiIkKWRnRUK4KNH3ZKt7/dr5gQqqo0qY3RRke2FTF",
-	"UBrVtG6CtWkro6qCqLksHAyxc9po63mh38zEWydrDSrcpXYnSkI9Cn+3PU+um74SCDRKFUGXJmuHFhQV",
-	"KUCrJ4n5LSU6Wn5LUIxeQGlP2+XFfzYsO82wpGiB3l3YpRhJbJ4cfXMsqS1gOxj0PHWac+YDmJXTSQpt",
-	"uinx+jQqOrJQJTYz2B6wzzhqS1jkOQBt3gty8FOHm2LqYCkzmrrL82fta9i304hmGxLLee7J11Jw7Yvm",
-	"/8vLLqCvty5LBtvxeI+0ZXVHbbHa5SZRxCnicUR59TxIVFtgn4+oISl/DqL2ToOMI8rrlUGi2urqfEQN",
-	"6bgzEmUZmlXyaZAoG1a0KnVuiKiavDozUWGV+QeJOqqYLQQYyag2jo8uE5+oNuVOKJLRPIyST+W/bV3l",
-	"lMfTQe/pfNPQrkHwN2AiDdq++dGmIWebTNyAqSnh32RjjIZ0fn6NfJ00Ie9rMqAXcCa2WyAR5ZE93gv4",
-	"KCnOCvfoZSzYauEVcScYWlM8f8h/BgAA//+YEA8YHxIAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -6,6 +6,7 @@ import UiCtx from "./Common/UiCtx.ts";
 import TasksPage from "./Tasks/TasksPage.tsx";
 import {Configuration, ShpankidsApi, UIApi, UIUserInfo} from "../openapi";
 import FamilyPage from "./Family/FamilyPage.tsx";
+import StatsPage from "./Stats/StatsPage.tsx";
 
 export const shpanKidsApi = new ShpankidsApi(new Configuration({
     basePath: ""
@@ -51,8 +52,8 @@ function App() {
                         element={<FamilyPage uiCtx={uiCtx}/>}
                     />
                     <Route
-                        path="page/history"
-                        element={<div>Task history:todo</div>}
+                        path="page/stats"
+                        element={<StatsPage uiCtx={uiCtx}></StatsPage>}
                     />
                 </Route>
             </Routes>
@@ -70,6 +71,10 @@ function Layout() {
                 <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                 <span>
                   <Link to="page/family">Family</Link>
+                </span>
+                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                <span>
+                  <Link to="page/stats">Stats</Link>
                 </span>
             </nav>
 
