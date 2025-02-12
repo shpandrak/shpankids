@@ -9,12 +9,41 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"io"
 	"shpankids/infra/database/kvstore"
+	"shpankids/infra/shpanstream"
+	"shpankids/infra/util/functional"
 )
 
 type kvsImpl struct {
 	client         *firestore.Client
 	parentDocument *firestore.DocumentRef
+}
+
+func (kvs *kvsImpl) StreamAllNamespaces(ctx context.Context) shpanstream.Stream[string] {
+	var collectionsIter *firestore.CollectionIterator
+	if kvs.parentDocument != nil {
+		collectionsIter = kvs.parentDocument.Collections(ctx)
+	} else {
+		collectionsIter = kvs.client.Collections(ctx)
+	}
+
+	return shpanstream.NewSimpleStream[string](func(ctx context.Context) (*string, error) {
+		collectionRef, err := collectionsIter.Next()
+		if err != nil {
+			if errors.Is(err, iterator.Done) {
+				return nil, io.EOF
+			}
+			return nil, err
+		}
+		return &collectionRef.ID, nil
+	})
+}
+
+func (kvs *kvsImpl) StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
+	return shpanstream.NewStream[functional.Entry[string, json.RawMessage]](&fsStreamProvider{
+		docIter: kvs.getCollectionRef(namespace).Documents(ctx),
+	})
 }
 
 func NewFirestoreKvs(client *firestore.Client, parentDocument *firestore.DocumentRef) kvstore.RawJsonStore {
@@ -123,4 +152,30 @@ func (kvs *kvsImpl) ListAllJSON(ctx context.Context, namespace string) (map[stri
 		result[doc.Ref.ID] = jsonData
 	}
 	return result, nil
+}
+
+type fsStreamProvider struct {
+	docIter *firestore.DocumentIterator
+}
+
+func (f fsStreamProvider) Open(_ context.Context) error {
+	return nil
+}
+
+func (f fsStreamProvider) Close() {
+}
+
+func (f fsStreamProvider) Emit(_ context.Context) (*functional.Entry[string, json.RawMessage], error) {
+	doc, err := f.docIter.Next()
+	if err != nil {
+		if errors.Is(err, iterator.Done) {
+			return nil, io.EOF
+		}
+		return nil, err
+	}
+	jsonData, err := json.Marshal(doc.Data())
+	if err != nil {
+		return nil, err
+	}
+	return &functional.Entry[string, json.RawMessage]{Key: doc.Ref.ID, Value: jsonData}, nil
 }

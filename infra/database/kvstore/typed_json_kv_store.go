@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 )
 
@@ -13,6 +14,7 @@ type JsonKvStore[K comparable, T any] interface {
 	Get(ctx context.Context, key K) (T, error)
 	Find(ctx context.Context, key K) (*T, error)
 	List(ctx context.Context) (map[K]T, error)
+	Stream(ctx context.Context) shpanstream.Stream[functional.Entry[K, T]]
 }
 
 type JsonKvStoreImpl[K comparable, T any] struct {
@@ -101,4 +103,22 @@ func (j *JsonKvStoreImpl[K, T]) List(ctx context.Context) (map[K]T, error) {
 	}, func(key string) (K, error) {
 		return j.strToKeyFunc(key)
 	})
+}
+
+func (j *JsonKvStoreImpl[K, T]) Stream(ctx context.Context) shpanstream.Stream[functional.Entry[K, T]] {
+	return shpanstream.MapStreamWithError[functional.Entry[string, json.RawMessage], functional.Entry[K, T]](
+		j.kvStore.StreamAllJson(ctx, j.namespace),
+		func(ctx context.Context, a *functional.Entry[string, json.RawMessage]) (*functional.Entry[K, T], error) {
+
+			var parsedVal T
+			err := json.Unmarshal(a.Value, &parsedVal)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal json when reading from namespace %s: %w", j.namespace, err)
+			}
+			key, err := j.strToKeyFunc(a.Key)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal key when reading from namespace %s: %w", j.namespace, err)
+			}
+			return &functional.Entry[K, T]{Key: key, Value: parsedVal}, nil
+		})
 }

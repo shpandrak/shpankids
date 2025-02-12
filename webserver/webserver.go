@@ -1,7 +1,6 @@
 package webserver
 
 import (
-	"cloud.google.com/go/firestore"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -10,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"shpankids/domain/task"
 	"shpankids/internal/api"
 	"shpankids/openapi"
 	"shpankids/shpankids"
@@ -38,7 +36,7 @@ const IndexPage = `
 var store = sessions.NewCookieStore([]byte("shpankids-secret"))
 
 func Start(
-	fs *firestore.Client,
+	taskManager shpankids.TaskManager,
 	userManager shpankids.UserManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
@@ -60,7 +58,7 @@ func Start(
 	apiImpl := api.NewOapiServerApiImpl(
 		auth.GetUserInfo,
 		userManager,
-		task.NewTaskManager(fs, auth.GetUserInfo, familyManager, sessionManager),
+		taskManager,
 		familyManager,
 		sessionManager,
 	)
@@ -152,7 +150,7 @@ func Start(
 /*
 handleMain Function renders the index page when the application index route is called
 */
-func handleMain(w http.ResponseWriter, r *http.Request) {
+func handleMain(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(IndexPage))
