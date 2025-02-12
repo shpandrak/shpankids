@@ -18,6 +18,7 @@ import type {
   ApiCreateFamilyTaskCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
   ApiTask,
+  ApiTaskStats,
   ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
 } from '../models/index';
@@ -28,6 +29,8 @@ import {
     ApiDeleteFamilyTaskCommandArgsToJSON,
     ApiTaskFromJSON,
     ApiTaskToJSON,
+    ApiTaskStatsFromJSON,
+    ApiTaskStatsToJSON,
     ApiUpdateFamilyTaskCommandArgsFromJSON,
     ApiUpdateFamilyTaskCommandArgsToJSON,
     ApiUpdateTaskStatusCommandArgsFromJSON,
@@ -40,6 +43,11 @@ export interface CreateFamilyTaskRequest {
 
 export interface DeleteFamilyTaskRequest {
     apiDeleteFamilyTaskCommandArgs?: ApiDeleteFamilyTaskCommandArgs;
+}
+
+export interface GetStatsRequest {
+    from?: Date;
+    to?: Date;
 }
 
 export interface UpdateFamilyTaskRequest {
@@ -109,6 +117,40 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async deleteFamilyTask(requestParameters: DeleteFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.deleteFamilyTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Task statistics
+     */
+    async getStatsRaw(requestParameters: GetStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiTaskStats>>> {
+        const queryParameters: any = {};
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = (requestParameters['from'] as any).toISOString();
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = (requestParameters['to'] as any).toISOString();
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/api/stats`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiTaskStatsFromJSON));
+    }
+
+    /**
+     * Task statistics
+     */
+    async getStats(requestParameters: GetStatsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiTaskStats>> {
+        const response = await this.getStatsRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

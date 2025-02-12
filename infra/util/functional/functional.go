@@ -281,6 +281,16 @@ func AllMatchInSliceNoErr[E any](s []E, f func(E) bool) bool {
 	return true
 }
 
+func CountSliceNoErr[E any](s []E, f func(E) bool) int {
+	var ret int
+	for _, e := range s {
+		if f(e) {
+			ret++
+		}
+	}
+	return ret
+}
+
 func AllMatchNoErr[E any](f func(E) bool, s ...E) bool {
 	for _, e := range s {
 		if !f(e) {

@@ -22,7 +22,15 @@ type Task struct {
 	Status      Status
 }
 
+type TaskStats struct {
+	UserId          string
+	ForDate         time.Time
+	TotalTasksCount int
+	DoneTasksCount  int
+}
+
 type Manager interface {
 	GetTasksForDate(ctx context.Context, date time.Time) ([]Task, error)
+	GetTaskStats(ctx context.Context, fromDate time.Time, toDate time.Time) ([]TaskStats, error)
 	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status Status, comment string) error
 }

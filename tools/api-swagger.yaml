@@ -110,6 +110,37 @@ paths:
                 items:
                   $ref: '#/components/schemas/ApiTask'
 
+  /api/stats:
+    get:
+      tags:
+        - shpankids
+      description: Task statistics
+      operationId: getStats
+      parameters:
+        - name: from
+          in: query
+          description: From date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: To date
+          required: false
+          schema:
+              type: string
+              format: date-time
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiTaskStats'
+
 
 components:
   schemas:
@@ -290,3 +321,21 @@ components:
       properties:
         taskId:
           type: string
+    ApiTaskStats:
+      type: object
+      required:
+          - forDate
+          - userId
+          - doneTasksCount
+          - totalTasksCount
+      properties:
+        forDate:
+          type: string
+          format: date-time
+        userId:
+          type: string
+        doneTasksCount:
+          type: integer
+        totalTasksCount:
+          type: integer
+

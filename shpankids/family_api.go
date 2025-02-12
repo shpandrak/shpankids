@@ -47,4 +47,5 @@ type FamilyManager interface {
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 	ListFamilyTasks(ctx context.Context, familyId string) ([]FamilyTaskDto, error)
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
+	GetFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 }
