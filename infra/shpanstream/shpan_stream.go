@@ -121,6 +121,12 @@ func MapStream[SRC any, TGT any](src Stream[SRC], mapper func(*SRC) *TGT) Stream
 		return mapper(src), nil
 	})
 }
+
+func MapStreamWhileFiltering[SRC any, TGT any](src Stream[SRC], mapper func(*SRC) *TGT) Stream[TGT] {
+	return MapStreamWhileFilteringWithError(src, func(ctx context.Context, src *SRC) (*TGT, error) {
+		return mapper(src), nil
+	})
+}
 func FlatMapStream[SRC any, TGT any](src Stream[SRC], mapper func(*SRC) Stream[TGT]) Stream[TGT] {
 	streamOfStreams := MapStreamWithError[SRC, Stream[TGT]](src, func(ctx context.Context, src *SRC) (*Stream[TGT], error) {
 		s := mapper(src)
@@ -144,6 +150,39 @@ func MapStreamWithError[SRC any, TGT any](srcS Stream[SRC], mapper func(context.
 				return nil, err
 			}
 			return mapper(ctx, v)
+		}, src.allLifecycleElement,
+	)
+}
+
+// MapStreamWhileFilteringWithError is a function that maps a stream of SRC to a stream of TGT while allowing to filtering.
+// filtering is done by returning nil from the mapper function.
+func MapStreamWhileFilteringWithError[SRC any, TGT any](srcS Stream[SRC], mapper func(context.Context, *SRC) (*TGT, error)) Stream[TGT] {
+	src, ok := srcS.(*stream[SRC])
+	if !ok {
+		slog.Error("Failed to cast Stream to stream")
+		return nil
+	}
+	return newStream[TGT](
+		func(ctx context.Context) (*TGT, error) {
+			v, err := src.provider(ctx)
+			if err != nil {
+				return nil, err
+			}
+			var next *TGT
+			for {
+				next, err = mapper(ctx, v)
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					return next, nil
+				}
+				v, err = src.provider(ctx)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 		}, src.allLifecycleElement,
 	)
 }

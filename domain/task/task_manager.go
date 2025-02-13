@@ -5,6 +5,7 @@ import (
 	"context"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 	"shpankids/shpankids"
 	"slices"
@@ -35,20 +36,24 @@ func NewTaskManager(
 	}
 }
 
-func (m *managerImpl) GetTaskStats(ctx context.Context, fromDate time.Time, toDate time.Time) ([]shpankids.TaskStats, error) {
+func (m *managerImpl) GetTaskStats(
+	ctx context.Context,
+	fromDate datekvs.Date,
+	toDate datekvs.Date,
+) shpanstream.Stream[shpankids.TaskStats] {
 
 	userId, err := m.userSessionManager(ctx)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
 	s, err := m.sessionManager.Get(ctx, *userId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
 
 	f, err := m.familyManager.GetFamily(ctx, s.FamilyId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
 
 	isAdmin := slices.ContainsFunc(f.Members, func(fm shpankids.FamilyMemberDto) bool {
@@ -66,27 +71,20 @@ func (m *managerImpl) GetTaskStats(ctx context.Context, fromDate time.Time, toDa
 
 	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
 
-	// todo:multiDate: for now assuming that from and to are the same date (hahaha)
-	return functional.MapSlice[string, shpankids.TaskStats](userIdsToFetch, func(userId string) (shpankids.TaskStats, error) {
-		userTasksForDate, err := m.filterTasksByUser(ctx, fromDate, familyTasks, userId)
-		if err != nil {
-			var ret shpankids.TaskStats
-			return ret, err
-		}
-		return shpankids.TaskStats{
-			UserId:  userId,
-			ForDate: fromDate,
-			DoneTasksCount: functional.CountSliceNoErr(userTasksForDate, func(t shpankids.Task) bool {
-				return t.Status == shpankids.StatusDone
-			}),
-			TotalTasksCount: len(userTasksForDate),
-		}, nil
-
-	})
-
+	return shpanstream.ConcatenatedStream[shpankids.TaskStats](
+		functional.MapSliceNoErr(userIdsToFetch, func(userId string) shpanstream.Stream[shpankids.TaskStats] {
+			return m.getUserTaskStatesForDateRange(
+				ctx,
+				fromDate,
+				toDate,
+				familyTasks,
+				userId,
+			)
+		})...,
+	)
 }
 
 func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([]shpankids.Task, error) {
@@ -107,7 +105,12 @@ func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([
 	return m.filterTasksByUser(ctx, forDate, familyTasks, *userId)
 }
 
-func (m *managerImpl) filterTasksByUser(ctx context.Context, forDate time.Time, familyTasks []shpankids.FamilyTaskDto, userId string) ([]shpankids.Task, error) {
+func (m *managerImpl) filterTasksByUser(
+	ctx context.Context,
+	forDate time.Time,
+	familyTasks []shpankids.FamilyTaskDto,
+	userId string,
+) ([]shpankids.Task, error) {
 	tasks := functional.MapSliceWhileFilteringNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) **shpankids.Task {
 
 		// Filtering away tasks that were deleted after the forDate
@@ -149,6 +152,73 @@ func (m *managerImpl) filterTasksByUser(ctx context.Context, forDate time.Time, 
 	}
 
 	return functional.MapSliceUnPtr(functional.MapValues(tasksById)), nil
+}
+
+func (m *managerImpl) getUserTaskStatesForDateRange(
+	ctx context.Context,
+	from datekvs.Date,
+	to datekvs.Date,
+	familyTasks []shpankids.FamilyTaskDto,
+	userId string,
+) shpanstream.Stream[shpankids.TaskStats] {
+	relevantUserTasks := functional.FilterSlice(familyTasks, func(ft shpankids.FamilyTaskDto) bool {
+
+		// Filtering away tasks that were deleted after the forDate
+		if ft.Status != shpankids.FamilyTaskStatusActive && ft.StatusDate.Before(from.Time) {
+			return false
+		}
+
+		// Filtering away tasks that are not assigned to the user
+		if !slices.ContainsFunc(ft.MemberIds, func(memberId string) bool {
+			return memberId == userId
+		}) {
+			return false
+		}
+		return true
+	})
+
+	userTaskRepo, err := NewUserTaskStatusRepository(ctx, m.kvs, userId)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
+	}
+
+	return shpanstream.MapStreamWhileFilteringWithError[datekvs.Date, shpankids.TaskStats](
+		datekvs.NewDateRangeStream(from, to),
+		func(ctx context.Context, dt *datekvs.Date) (*shpankids.TaskStats, error) {
+			userAssignableTasksByTaskId := functional.SliceToMapNoErr(
+				functional.FilterSlice(relevantUserTasks, func(t shpankids.FamilyTaskDto) bool {
+					return t.Status == shpankids.FamilyTaskStatusActive || t.StatusDate.After(dt.Time)
+				}),
+				func(t shpankids.FamilyTaskDto) string {
+					return t.TaskId
+				},
+			)
+
+			if len(userAssignableTasksByTaskId) == 0 {
+				return nil, nil
+			}
+
+			ret := &shpankids.TaskStats{
+				UserId:          userId,
+				ForDate:         dt.Time,
+				TotalTasksCount: len(userAssignableTasksByTaskId),
+				DoneTasksCount:  0,
+			}
+
+			err := userTaskRepo.GetAllForDate(ctx, *dt).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
+
+				if _, found := userAssignableTasksByTaskId[dr.Key]; found {
+					if dr.Value.Status == shpankids.StatusDone {
+						ret.DoneTasksCount++
+					}
+				}
+			})
+			if err != nil {
+				return nil, err
+			}
+			return ret, nil
+		})
+
 }
 
 func (m *managerImpl) UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status shpankids.TaskStatus, comment string) error {
