@@ -3,6 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"shpankids/infra/database/datekvs"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 	"shpankids/internal/infra/util"
 	"shpankids/openapi"
@@ -18,35 +21,45 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
-func (oa *OapiServerApiImpl) GetStats(ctx context.Context, request openapi.GetStatsRequestObject) (openapi.GetStatsResponseObject, error) {
-	from := time.Now().Truncate(24 * time.Hour)
+func (oa *OapiServerApiImpl) GetStats(
+	ctx context.Context,
+	request openapi.GetStatsRequestObject,
+) (openapi.GetStatsResponseObject, error) {
+	from := *datekvs.NewDateFromTime(time.Now())
 	to := from
 
 	if request.Params.From != nil {
-		from = *request.Params.From
+		from = *datekvs.NewDateFromTime(*request.Params.From)
 	}
 	if request.Params.To != nil {
-		to = *request.Params.To
+		to = *datekvs.NewDateFromTime(*request.Params.To)
 	}
-	if to.Before(from) {
+	if to.Before(from.Time) {
 		return nil, util.BadInputError(fmt.Errorf("to date is before from date"))
 	}
-	stats, err := oa.taskManager.GetTaskStats(ctx, from, to)
-	if err != nil {
-		return nil, err
-	}
-	return openapi.GetStats200JSONResponse(functional.MapSliceNoErr(
-		stats,
-		func(s shpankids.TaskStats) openapi.ApiTaskStats {
-			return openapi.ApiTaskStats{
-				UserId:          s.UserId,
-				ForDate:         s.ForDate,
-				TotalTasksCount: s.TotalTasksCount,
-				DoneTasksCount:  s.DoneTasksCount,
-			}
-		},
-	)), nil
+	return &streamingGetStatsResponseObject{
+		stream: shpanstream.MapStream[shpankids.TaskStats, openapi.ApiTaskStats](
+			oa.taskManager.GetTaskStats(ctx, from, to),
+			func(s *shpankids.TaskStats) *openapi.ApiTaskStats {
+				return &openapi.ApiTaskStats{
+					UserId:          s.UserId,
+					ForDate:         s.ForDate,
+					TotalTasksCount: s.TotalTasksCount,
+					DoneTasksCount:  s.DoneTasksCount,
+				}
 
+			}),
+		ctx: ctx,
+	}, nil
+}
+
+type streamingGetStatsResponseObject struct {
+	stream shpanstream.Stream[openapi.ApiTaskStats]
+	ctx    context.Context
+}
+
+func (s *streamingGetStatsResponseObject) VisitGetStatsResponse(w http.ResponseWriter) error {
+	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
 }
 
 func NewOapiServerApiImpl(

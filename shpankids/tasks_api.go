@@ -2,6 +2,8 @@ package shpankids
 
 import (
 	"context"
+	"shpankids/infra/database/datekvs"
+	"shpankids/infra/shpanstream"
 	"time"
 )
 
@@ -31,6 +33,6 @@ type TaskStats struct {
 
 type TaskManager interface {
 	GetTasksForDate(ctx context.Context, date time.Time) ([]Task, error)
-	GetTaskStats(ctx context.Context, fromDate time.Time, toDate time.Time) ([]TaskStats, error)
+	GetTaskStats(ctx context.Context, fromDate datekvs.Date, toDate datekvs.Date) shpanstream.Stream[TaskStats]
 	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status TaskStatus, comment string) error
 }
