@@ -7,6 +7,7 @@ import (
 	"shpankids/infra/util/castutil"
 	"shpankids/openapi"
 	"shpankids/shpankids"
+	"time"
 )
 
 func (oa *OapiServerApiImpl) UpdateTaskStatus(
@@ -40,6 +41,7 @@ func (oa *OapiServerApiImpl) CreateFamilyTask(ctx context.Context, request opena
 		Title:       request.Body.Task.Title,
 		Description: castutil.StrPtrToStr(request.Body.Task.Description),
 		MemberIds:   request.Body.Task.MemberIds,
+		Created:     time.Now(),
 	})
 	if err != nil {
 		return nil, err

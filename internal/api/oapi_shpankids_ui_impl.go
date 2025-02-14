@@ -75,7 +75,7 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(
 		return nil, err
 	}
 
-	familyTasks, err := oa.familyManager.ListFamilyTasks(ctx, family.Id)
+	familyTasks, err := oa.familyManager.ListFamilyTasks(ctx, family.Id).CollectFilterNil(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -98,5 +98,4 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(
 			}
 		}),
 	}, nil
-
 }

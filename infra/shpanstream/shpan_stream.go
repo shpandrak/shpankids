@@ -58,6 +58,7 @@ type Stream[T any] interface {
 	GetFirst(ctx context.Context) (*T, error)
 	FindLast(ctx context.Context) (Optional[T], error)
 	Collect(ctx context.Context) ([]*T, error)
+	CollectFilterNil(ctx context.Context) ([]T, error)
 	SubscribeOnStreamLifecycle(lch StreamLifecycle) Stream[T]
 }
 
@@ -249,6 +250,19 @@ func (s *stream[T]) Collect(ctx context.Context) ([]*T, error) {
 	var result []*T
 	err := s.Consume(ctx, func(v *T) {
 		result = append(result, v)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *stream[T]) CollectFilterNil(ctx context.Context) ([]T, error) {
+	var result []T
+	err := s.Consume(ctx, func(v *T) {
+		if v != nil {
+			result = append(result, *v)
+		}
 	})
 	if err != nil {
 		return nil, err
