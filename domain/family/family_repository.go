@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const familiesSpaceStoreUri = "families"
+
 type repository kvstore.JsonKvStore[string, dbFamily]
 
 type dbFamilyMember struct {
@@ -24,7 +26,7 @@ type dbFamily struct {
 func newFamilyRepository(store kvstore.RawJsonStore) repository {
 	return kvstore.NewJsonKvStoreImpl[string, dbFamily](
 		store,
-		"families",
+		familiesSpaceStoreUri,
 		kvstore.StringKeyToString,
 		kvstore.StringToKey,
 	)

@@ -69,11 +69,10 @@ func (m *managerImpl) GetTaskStats(
 		return nil
 	})
 
-	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId)
+	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId).CollectFilterNil(ctx)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
-
 	return shpanstream.ConcatenatedStream[shpankids.TaskStats](
 		functional.MapSliceNoErr(userIdsToFetch, func(userId string) shpanstream.Stream[shpankids.TaskStats] {
 			return m.getUserTaskStatesForDateRange(
@@ -97,7 +96,7 @@ func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([
 	if err != nil {
 		return nil, err
 	}
-	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId)
+	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId).CollectFilterNil(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +167,10 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 			return false
 		}
 
+		if ft.Created.After(to.Time) {
+			return false
+		}
+
 		// Filtering away tasks that are not assigned to the user
 		if !slices.ContainsFunc(ft.MemberIds, func(memberId string) bool {
 			return memberId == userId
@@ -187,7 +190,8 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 		func(ctx context.Context, dt *datekvs.Date) (*shpankids.TaskStats, error) {
 			userAssignableTasksByTaskId := functional.SliceToMapNoErr(
 				functional.FilterSlice(relevantUserTasks, func(t shpankids.FamilyTaskDto) bool {
-					return t.Status == shpankids.FamilyTaskStatusActive || t.StatusDate.After(dt.Time)
+					return t.Created.Before(dt.Time) &&
+						(t.Status == shpankids.FamilyTaskStatusActive || t.StatusDate.After(dt.Time))
 				}),
 				func(t shpankids.FamilyTaskDto) string {
 					return t.TaskId

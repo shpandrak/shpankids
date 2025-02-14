@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"shpankids/infra/database/kvstore"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 	"shpankids/internal/infra/util"
 	"shpankids/shpankids"
@@ -112,39 +113,109 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 		return err
 	}
 	// Create the family task in repo
+
+	familyTask.Created = time.Now()
 	return repo.Set(ctx, familyTask.TaskId, dbFamilyTask{
 		Title:       familyTask.Title,
 		Description: familyTask.Description,
 		MemberIds:   familyTask.MemberIds,
 		Status:      shpankids.FamilyTaskStatusActive,
-		StatusDate:  time.Now(),
+		Created:     familyTask.Created,
+		StatusDate:  familyTask.Created,
 	})
 }
-func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) ([]shpankids.FamilyTaskDto, error) {
+
+func (m *Manager) CreateFamilyProblem(ctx context.Context, familyId string, familyProblem shpankids.FamilyProblemDto) error {
+	if familyProblem.ProblemId == "" {
+		return fmt.Errorf("task id is required")
+	}
+	if familyProblem.Title == "" {
+		return util.BadInputError(fmt.Errorf("title is required"))
+	}
+	if len(familyProblem.MemberIds) == 0 {
+		return util.BadInputError(fmt.Errorf("at least one member is required for a task"))
+	}
+
+	// Get the user email from the context
+	uId, err := m.userSessionManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	f, err := m.GetFamily(ctx, familyId)
+	if err != nil {
+		return err
+	}
+
+	// Check if the user is and admin of the family
+	isAdmin := slices.ContainsFunc(f.Members, func(member shpankids.FamilyMemberDto) bool {
+		return member.UserId == *uId && member.Role == shpankids.RoleAdmin
+	})
+	if !isAdmin {
+		return util.ForbiddenError(fmt.Errorf("only admin can create family tasks for family %s", f.Name))
+	}
+
+	// Check if all task members are part of the family
+	famMembersSet := functional.SliceToSetExtractKeyNoErr(f.Members, func(member shpankids.FamilyMemberDto) string {
+		return member.UserId
+	})
+
+	for _, memberId := range familyProblem.MemberIds {
+		if _, ok := famMembersSet[memberId]; !ok {
+			return util.BadInputError(fmt.Errorf("member %s is not part of the family %s", memberId, f.Name))
+		}
+	}
+
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId)
+	if err != nil {
+		return err
+	}
+
+	// Create the family task in repo
+	familyProblem.Created = time.Now()
+	return repo.Set(ctx, familyProblem.ProblemId, dbFamilyProblem{
+		Title:       familyProblem.Title,
+		Description: familyProblem.Description,
+		Created:     familyProblem.Created,
+		Hints:       familyProblem.Hints,
+		MemberIds:   familyProblem.MemberIds,
+		Alternatives: functional.MapSliceNoErr(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) dbProblemAlternative {
+			return dbProblemAlternative{
+				Title:       a.Title,
+				Description: a.Description,
+				Correct:     a.Correct,
+			}
+		}),
+		Status:     shpankids.FamilyTaskStatusActive,
+		StatusDate: familyProblem.Created,
+	})
+}
+
+func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
 	// Get the user email from the context
 	_, err := m.userSessionManager(ctx)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.FamilyTaskDto](err)
 	}
 	repo, err := newFamilyTaskRepository(ctx, m.kvs, familyId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.FamilyTaskDto](err)
 	}
 	// Find the family tasks in repo
-	dbTasks, err := repo.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return functional.MapToSliceNoErr(dbTasks, func(taskId string, dbFt dbFamilyTask) shpankids.FamilyTaskDto {
-		return shpankids.FamilyTaskDto{
-			TaskId:      taskId,
-			Title:       dbFt.Title,
-			Description: dbFt.Description,
-			MemberIds:   dbFt.MemberIds,
-			Status:      dbFt.Status,
-			StatusDate:  dbFt.StatusDate,
-		}
-	}), nil
+	return shpanstream.MapStream(
+		repo.Stream(ctx),
+		func(e *functional.Entry[string, dbFamilyTask]) *shpankids.FamilyTaskDto {
+			return &shpankids.FamilyTaskDto{
+				TaskId:      e.Key,
+				Title:       e.Value.Title,
+				Description: e.Value.Description,
+				MemberIds:   e.Value.MemberIds,
+				Status:      e.Value.Status,
+				StatusDate:  e.Value.StatusDate,
+				Created:     e.Value.Created,
+			}
+		},
+	)
 }
 
 func (m *Manager) CreateFamily(

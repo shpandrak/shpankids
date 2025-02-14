@@ -4,6 +4,8 @@ import {shpanKidsApi, uiApi} from "../App.tsx";
 import {showError} from "../Util.ts";
 import {ApiFamilyTask, ApiTask, UIFamilyInfo} from "../../openapi";
 import FamilyTaskEditor from "./FamilyTaskEditor.tsx";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faTrash} from "@fortawesome/free-solid-svg-icons";
 
 
 export interface FamilyPageProps {
@@ -59,13 +61,17 @@ const FamilyPage: React.FC<FamilyPageProps> = (props) => {
                                 })
 
                                     <button onClick={() => {
-                                        shpanKidsApi.deleteFamilyTask({apiDeleteFamilyTaskCommandArgs: {taskId: task.id}})
-                                            .then(() => {
-                                                uiApi.getFamilyInfo()
-                                                    .then(setFamilyInfo)
-                                            })
-                                            .catch(showError)
-                                    }}>Delete
+                                        const result = window.confirm("Are you sure you want to delete task '" + task.title + "'?");
+                                        if (result) {
+                                            shpanKidsApi.deleteFamilyTask({apiDeleteFamilyTaskCommandArgs: {taskId: task.id}})
+                                                .then(() => {
+                                                    uiApi.getFamilyInfo()
+                                                        .then(setFamilyInfo)
+                                                })
+                                                .catch(showError)
+                                        }
+
+                                    }}><FontAwesomeIcon title={"Make this task go away"} icon={faTrash}/>
                                     </button>
                                 </li>
                             </>
