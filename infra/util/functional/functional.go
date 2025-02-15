@@ -502,3 +502,8 @@ func AllNil(args ...interface{}) bool {
 	}
 	return true
 }
+
+func DefaultValue[T any]() T {
+	var ret T
+	return ret
+}
