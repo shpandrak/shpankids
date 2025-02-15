@@ -60,8 +60,7 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(
 		currUsr, err := oa.userManager.GetUser(ctx, member.UserId)
 
 		if err != nil {
-			var retErr openapi.UIFamilyMember
-			return retErr, err
+			return functional.DefaultValue[openapi.UIFamilyMember](), err
 		}
 		return openapi.UIFamilyMember{
 			Email:     openapitypes.Email(currUsr.Email),

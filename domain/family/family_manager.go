@@ -125,15 +125,17 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 	})
 }
 
-func (m *Manager) CreateFamilyProblem(ctx context.Context, familyId string, familyProblem shpankids.FamilyProblemDto) error {
+func (m *Manager) CreateFamilyProblem(
+	ctx context.Context,
+	familyId string,
+	forUserId string,
+	familyProblem shpankids.FamilyProblemDto,
+) error {
 	if familyProblem.ProblemId == "" {
 		return fmt.Errorf("task id is required")
 	}
 	if familyProblem.Title == "" {
 		return util.BadInputError(fmt.Errorf("title is required"))
-	}
-	if len(familyProblem.MemberIds) == 0 {
-		return util.BadInputError(fmt.Errorf("at least one member is required for a task"))
 	}
 
 	// Get the user email from the context
@@ -160,13 +162,11 @@ func (m *Manager) CreateFamilyProblem(ctx context.Context, familyId string, fami
 		return member.UserId
 	})
 
-	for _, memberId := range familyProblem.MemberIds {
-		if _, ok := famMembersSet[memberId]; !ok {
-			return util.BadInputError(fmt.Errorf("member %s is not part of the family %s", memberId, f.Name))
-		}
+	if _, ok := famMembersSet[forUserId]; !ok {
+		return util.BadInputError(fmt.Errorf("user %s is not part of the family %s", forUserId, f.Name))
 	}
 
-	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId)
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, forUserId)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (m *Manager) CreateFamilyProblem(ctx context.Context, familyId string, fami
 		Description: familyProblem.Description,
 		Created:     familyProblem.Created,
 		Hints:       familyProblem.Hints,
-		MemberIds:   familyProblem.MemberIds,
+		Explanation: familyProblem.Explanation,
 		Alternatives: functional.MapSliceNoErr(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) dbProblemAlternative {
 			return dbProblemAlternative{
 				Title:       a.Title,

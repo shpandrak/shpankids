@@ -46,11 +46,11 @@ type FamilyProblemDto struct {
 	ProblemId    string
 	Title        string
 	Description  string
-	MemberIds    []string
 	Created      time.Time
 	Status       FamilyTaskStatus
 	StatusDate   time.Time
 	Hints        []string
+	Explanation  string
 	Alternatives []ProblemAlternativeDto
 }
 
@@ -64,6 +64,7 @@ const (
 type FamilyManager interface {
 	CreateFamily(ctx context.Context, familyId string, familyName string, memberUserIds []string, adminUserIds []string) error
 	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
+	CreateFamilyProblem(ctx context.Context, familyId string, forUserId string, familyProblem FamilyProblemDto) error
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 	ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[FamilyTaskDto]
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
