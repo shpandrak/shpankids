@@ -3,13 +3,14 @@ import UiCtx from "../Common/UiCtx.ts";
 import {shpanKidsApi} from "../App.tsx";
 import {showError} from "../Util.ts";
 import {ApiAssignment} from "../../openapi";
+import ProblemComponent from "../Problem/ProblemComponent.tsx";
 
 
-export interface TasksPageProps {
+export interface AssignmentsPageProps {
     uiCtx: UiCtx;
 }
 
-const AssignmentsPage: React.FC<TasksPageProps> = (props) => {
+const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
     const [assignments, setAssignments] = React.useState<ApiAssignment[]>([]);
     const [loading, setLoading] = React.useState(true);
 
@@ -30,7 +31,7 @@ const AssignmentsPage: React.FC<TasksPageProps> = (props) => {
                 {assignments.map((assignment) => (
                     <li style={{textDecoration: assignment.status == "done" ? "line-through" : "auto"}}
                         key={assignment.id}>{assignment.title}
-                        {assignment.type == "task" &&  assignment.status == "open" && (
+                        {assignment.type == "task" && assignment.status == "open" && (
                             <button onClick={() => {
                                 shpanKidsApi.updateTaskStatus({
                                     apiUpdateTaskStatusCommandArgs: {
@@ -72,6 +73,23 @@ const AssignmentsPage: React.FC<TasksPageProps> = (props) => {
                                     .catch(showError);
 
                             }}>Undo
+                            </button>
+                        )}
+                        {assignment.type == "problemSet" && assignment.status == "open" && (
+                            <button onClick={() => {
+                                shpanKidsApi.loadProblemForAssignment({
+                                    apiLoadProblemForAssignmentCommandArgs: {
+                                        forDate: assignment.forDate,
+                                        assignmentId: assignment.id
+                                    }
+                                })
+                                    .then((p) => {
+                                        props.uiCtx.showModal((
+                                            <ProblemComponent uiCtx={props.uiCtx} problem={p.problem}/>))
+                                    })
+                                    .catch(showError);
+
+                            }}>Load Problem
                             </button>
                         )}
                     </li>
