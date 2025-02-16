@@ -48,6 +48,27 @@ paths:
         '200':
           description: OK
 
+  /api/commands/load-problem-for-assignment:
+    post:
+      tags:
+        - shpankids
+      description: Loads next problem for assignment
+      operationId: loadProblemForAssignment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiLoadProblemForAssignmentCommandArgs'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiLoadProblemForAssignmentCommandResult'
+
+
+
   /api/commands/create-family-task:
     post:
       tags:
@@ -129,8 +150,8 @@ paths:
           description: To date
           required: false
           schema:
-              type: string
-              format: date-time
+            type: string
+            format: date-time
       responses:
         '200':
           description: OK
@@ -235,10 +256,10 @@ components:
         - member
 
     ApiAssignmentType:
-        type: string
-        enum:
-          - task
-          - problem
+      type: string
+      enum:
+        - task
+        - problemSet
     ApiAssignment:
       required:
         - id
@@ -253,7 +274,7 @@ components:
         type:
           $ref: '#/components/schemas/ApiAssignmentType'
         title:
-            type: string
+          type: string
         forDate:
           type: string
           format: date-time
@@ -262,32 +283,23 @@ components:
         description:
           type: string
 
-    ApiProblemAssignment:
+    ApiProblem:
       type: object
-      description: Task
       required:
-      - problems
+        - id
+        - title
+        - answers
       properties:
-        problems:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        answers:
           type: array
           items:
-            $ref: '#/components/schemas/ApiProblem'
-    ApiProblem:
-        type: object
-        required:
-          - id
-          - title
-        properties:
-          id:
-            type: string
-          title:
-            type: string
-          description:
-            type: string
-          answers:
-            type: array
-            items:
-              type: string
+            $ref: '#/components/schemas/ApiProblemAnswer'
 
     ApiProblemAnswer:
       type: object
@@ -366,10 +378,10 @@ components:
     ApiTaskStats:
       type: object
       required:
-          - forDate
-          - userId
-          - doneTasksCount
-          - totalTasksCount
+        - forDate
+        - userId
+        - doneTasksCount
+        - totalTasksCount
       properties:
         forDate:
           type: string
@@ -381,3 +393,21 @@ components:
         totalTasksCount:
           type: integer
 
+    ApiLoadProblemForAssignmentCommandArgs:
+        type: object
+        required:
+            - assignmentId
+            - forDate
+        properties:
+          assignmentId:
+            type: string
+          forDate:
+            type: string
+            format: date-time
+    ApiLoadProblemForAssignmentCommandResult:
+        type: object
+        required:
+            - problem
+        properties:
+          problem:
+            $ref: '#/components/schemas/ApiProblem'

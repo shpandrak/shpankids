@@ -114,8 +114,39 @@ func appBootstrap(
 			if err != nil {
 				return err
 			}
-
 		}
+
+		err = familyManager.CreateFamilyProblemSet(bootstrapCtx, shpanFamilyId, peteUserId, shpankids.FamilyProblemSetDto{
+			ProblemSetId: "problemSet1",
+			Title:        "שאלות מוזיקה",
+		})
+		if err != nil {
+			return err
+		}
+
+		err = familyManager.CreateFamilyProblem(bootstrapCtx, shpanFamilyId, peteUserId, "problemSet1", shpankids.FamilyProblemDto{
+			ProblemId: "problem1",
+			Title:     "מהם הצלילים באקורד רה מינור?",
+			Alternatives: []shpankids.ProblemAlternativeDto{
+				{
+					Title: "רה-סול-דו",
+				},
+				{
+					Title: "רה-סול-סי",
+				},
+				{
+					Title:   "רה-פה-לה",
+					Correct: true,
+				},
+				{
+					Title: "רה-פה#-לה",
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+
 	}
 
 	for _, currDefaultUser := range defaultUsers {

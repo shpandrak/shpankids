@@ -19,8 +19,8 @@ const (
 type AssignmentType string
 
 const (
-	AssignmentTypeTask    AssignmentType = "task"
-	AssignmentTypeProblem AssignmentType = "problem"
+	AssignmentTypeTask       AssignmentType = "task"
+	AssignmentTypeProblemSet AssignmentType = "problemSet"
 )
 
 type Assignment struct {
@@ -40,8 +40,7 @@ type TaskStats struct {
 }
 
 type AssignmentManager interface {
-	ListAssignmentsForToday(ctx context.Context) ([]Assignment, error)
-	ListAssignmentsForDate(ctx context.Context, date datekvs.Date) ([]Assignment, error)
+	ListAssignmentsForToday(ctx context.Context) shpanstream.Stream[Assignment]
 	GetTaskStats(ctx context.Context, fromDate datekvs.Date, toDate datekvs.Date) shpanstream.Stream[TaskStats]
 	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status AssignmentStatus, comment string) error
 }

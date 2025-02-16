@@ -19,7 +19,7 @@
  */
 export const ApiAssignmentType = {
     Task: 'task',
-    Problem: 'problem'
+    ProblemSet: 'problemSet'
 } as const;
 export type ApiAssignmentType = typeof ApiAssignmentType[keyof typeof ApiAssignmentType];
 
