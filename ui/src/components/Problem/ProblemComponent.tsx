@@ -22,18 +22,27 @@ const ProblemComponent: React.FC<ProblemComponentProps> = (props) => {
             {props.problem.description && (<div>{props.problem.description}</div>)}
             <div>
                 <h3>Answers</h3>
-                //radio group for answers
-                {props.problem.answers.map((answer) => (
-                    <div key={answer.id}>
-                        <input type="radio"
-                               id={answer.id}
-                               name="answer"
-                               value={answer.id}
-                               onChange={(e) => setSelectedAnswerId(e.target.value)}
-                        />
-                        <label htmlFor={answer.id}>{answer.title}</label>
-                    </div>
-                ))}
+                <table>
+                    <tbody>
+
+                        {props.problem.answers.map((answer) => (
+                        <tr key={answer.id}>
+                            <td>
+                                <input type="radio"
+                                       id={answer.id}
+                                       name="answer"
+                                       value={answer.id}
+                                       onChange={(e) => setSelectedAnswerId(e.target.value)}
+                                />
+                            </td>
+                            <td>
+                                <label htmlFor={answer.id}>{answer.title}</label>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+
             </div>
         </div>
     );

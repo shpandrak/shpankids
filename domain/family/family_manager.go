@@ -131,13 +131,16 @@ func (m *Manager) CreateFamilyProblemSet(ctx context.Context, familyId string, f
 	}
 	// Create the family task in repo
 	familyProblemSet.Created = time.Now()
-	return psRepo.Set(ctx, familyProblemSet.ProblemSetId, dbFamilyProblemSet{
-		Title:       familyProblemSet.Title,
-		Description: familyProblemSet.Description,
-		Created:     familyProblemSet.Created,
-		Status:      shpankids.FamilyAssignmentStatusActive,
-		StatusDate:  familyProblemSet.Created,
-	})
+	return psRepo.Set(
+		ctx,
+		familyProblemSet.ProblemSetId,
+		dbFamilyProblemSet{
+			Title:       familyProblemSet.Title,
+			Description: familyProblemSet.Description,
+			Created:     familyProblemSet.Created,
+			Status:      shpankids.FamilyAssignmentStatusActive,
+			StatusDate:  familyProblemSet.Created,
+		})
 }
 
 func (m *Manager) CreateFamilyProblem(
@@ -148,7 +151,7 @@ func (m *Manager) CreateFamilyProblem(
 	familyProblem shpankids.FamilyProblemDto,
 ) error {
 	if familyProblem.ProblemId == "" {
-		return fmt.Errorf("task id is required")
+		return fmt.Errorf("problemId id is required")
 	}
 	if familyProblem.Title == "" {
 		return util.BadInputError(fmt.Errorf("title is required"))

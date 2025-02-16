@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const problemSetsRepoUri = "problemSets"
+
 type problemsRepository archkvs.ArchivedKvs[string, dbFamilyProblem]
 
 func newFamilyProblemsRepository(ctx context.Context, kvs kvstore.RawJsonStore, familyId string, userId string, problemSetId string) (problemsRepository, error) {
@@ -16,7 +18,7 @@ func newFamilyProblemsRepository(ctx context.Context, kvs kvstore.RawJsonStore, 
 		familyId,
 		"users",
 		userId,
-		"problemSets",
+		problemSetsRepoUri,
 		problemSetId,
 	})
 	if err != nil {
@@ -52,7 +54,7 @@ func newProblemSetsRepository(
 
 	return kvstore.NewJsonKvStoreImpl[string, dbFamilyProblemSet](
 		familyProblemsStore,
-		"problemSets",
+		problemSetsRepoUri,
 		kvstore.StringKeyToString,
 		kvstore.StringToKey,
 	), nil
