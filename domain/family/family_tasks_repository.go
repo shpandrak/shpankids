@@ -8,12 +8,12 @@ import (
 )
 
 type dbFamilyTask struct {
-	Title       string                     `json:"title"`
-	Description string                     `json:"description"`
-	MemberIds   []string                   `json:"memberIds"`
-	Created     time.Time                  `json:"created"`
-	Status      shpankids.FamilyTaskStatus `json:"status"`
-	StatusDate  time.Time                  `json:"statusDate"`
+	Title       string                           `json:"title"`
+	Description string                           `json:"description"`
+	MemberIds   []string                         `json:"memberIds"`
+	Created     time.Time                        `json:"created"`
+	Status      shpankids.FamilyAssignmentStatus `json:"status"`
+	StatusDate  time.Time                        `json:"statusDate"`
 }
 
 type familyTaskRepository kvstore.JsonKvStore[string, dbFamilyTask]

@@ -36,7 +36,7 @@ const IndexPage = `
 var store = sessions.NewCookieStore([]byte("shpankids-secret"))
 
 func Start(
-	taskManager shpankids.TaskManager,
+	assignmentManager shpankids.AssignmentManager,
 	userManager shpankids.UserManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
@@ -58,7 +58,7 @@ func Start(
 	apiImpl := api.NewOapiServerApiImpl(
 		auth.GetUserInfo,
 		userManager,
-		taskManager,
+		assignmentManager,
 		familyManager,
 		sessionManager,
 	)

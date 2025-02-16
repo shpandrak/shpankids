@@ -3,7 +3,7 @@ import React, {useEffect, useState} from "react";
 import {Link, Outlet, Route, Routes} from "react-router-dom";
 import Modal from "./Common/Modal.tsx";
 import UiCtx from "./Common/UiCtx.ts";
-import TasksPage from "./Tasks/TasksPage.tsx";
+import AssignmentsPage from "./Assignment/AssignmentsPage.tsx";
 import {Configuration, ShpankidsApi, UIApi, UIUserInfo} from "../openapi";
 import FamilyPage from "./Family/FamilyPage.tsx";
 import StatsPage from "./Stats/StatsPage.tsx";
@@ -44,7 +44,7 @@ function App() {
                     <Route
                         index
                         element={
-                            <TasksPage uiCtx={uiCtx}/>
+                            <AssignmentsPage uiCtx={uiCtx}/>
                         }
                     />
                     <Route

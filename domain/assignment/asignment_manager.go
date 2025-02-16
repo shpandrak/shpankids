@@ -1,4 +1,4 @@
-package task
+package assignment
 
 import (
 	"cloud.google.com/go/firestore"
@@ -20,13 +20,27 @@ type managerImpl struct {
 	familyManager      shpankids.FamilyManager
 }
 
-func NewTaskManager(
+func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) ([]shpankids.Assignment, error) {
+	userId, err := m.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := m.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.doListAssignments(ctx, datekvs.TodayDate(s.Location), s.FamilyId, *userId)
+}
+
+func NewAssignmentManager(
 	fs *firestore.Client,
 	kvs kvstore.RawJsonStore,
 	userSessionManager shpankids.UserSessionManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
-) shpankids.TaskManager {
+) shpankids.AssignmentManager {
 	return &managerImpl{
 		fs:                 fs,
 		kvs:                kvs,
@@ -86,7 +100,7 @@ func (m *managerImpl) GetTaskStats(
 	)
 }
 
-func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([]shpankids.Task, error) {
+func (m *managerImpl) ListAssignmentsForDate(ctx context.Context, forDate datekvs.Date) ([]shpankids.Assignment, error) {
 	userId, err := m.userSessionManager(ctx)
 	if err != nil {
 		return nil, err
@@ -96,24 +110,34 @@ func (m *managerImpl) GetTasksForDate(ctx context.Context, forDate time.Time) ([
 	if err != nil {
 		return nil, err
 	}
-	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId).CollectFilterNil(ctx)
+
+	return m.doListAssignments(ctx, forDate, s.FamilyId, *userId)
+}
+
+func (m *managerImpl) doListAssignments(
+	ctx context.Context,
+	forDate datekvs.Date,
+	familyId string,
+	userId string,
+) ([]shpankids.Assignment, error) {
+	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, familyId).CollectFilterNil(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return m.filterTasksByUser(ctx, forDate, familyTasks, *userId)
+	return m.filterTaskAssignmentsForUser(ctx, forDate, familyTasks, userId)
 }
 
-func (m *managerImpl) filterTasksByUser(
+func (m *managerImpl) filterTaskAssignmentsForUser(
 	ctx context.Context,
-	forDate time.Time,
+	forDate datekvs.Date,
 	familyTasks []shpankids.FamilyTaskDto,
 	userId string,
-) ([]shpankids.Task, error) {
-	tasks := functional.MapSliceWhileFilteringNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) **shpankids.Task {
+) ([]shpankids.Assignment, error) {
+	tasks := functional.MapSliceWhileFilteringNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) **shpankids.Assignment {
 
 		// Filtering away tasks that were deleted after the forDate
-		if ft.Status != shpankids.FamilyTaskStatusActive && ft.StatusDate.Before(forDate) {
+		if ft.Status != shpankids.FamilyAssignmentStatusActive && ft.StatusDate.Before(forDate.Time) {
 			return nil
 		}
 
@@ -123,15 +147,17 @@ func (m *managerImpl) filterTasksByUser(
 		}) {
 			return nil
 		}
-		return functional.ValueToPointer(&shpankids.Task{
+		return functional.ValueToPointer(&shpankids.Assignment{
 			Id:          ft.TaskId,
+			ForDate:     forDate,
+			Type:        shpankids.AssignmentTypeTask,
 			Title:       ft.Title,
-			Description: ft.Description,
 			Status:      shpankids.StatusOpen,
+			Description: ft.Description,
 		})
 	})
 
-	tasksById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Task) string {
+	tasksById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Assignment) string {
 		return t.Id
 	})
 
@@ -140,7 +166,7 @@ func (m *managerImpl) filterTasksByUser(
 		return nil, err
 	}
 
-	err = userTaskRepo.GetAllForDate(ctx, *datekvs.NewDateFromTime(forDate)).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
+	err = userTaskRepo.GetAllForDate(ctx, forDate).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
 		foundTask, found := tasksById[dr.Key]
 		if found {
 			foundTask.Status = dr.Value.Status
@@ -163,11 +189,11 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 	relevantUserTasks := functional.FilterSlice(familyTasks, func(ft shpankids.FamilyTaskDto) bool {
 
 		// Filtering away tasks that were deleted after the forDate
-		if ft.Status != shpankids.FamilyTaskStatusActive && ft.StatusDate.Before(from.Time) {
+		if ft.Status != shpankids.FamilyAssignmentStatusActive && ft.StatusDate.Before(from.Time) {
 			return false
 		}
 
-		if ft.Created.After(to.Time) {
+		if ft.Created.After(to.DateEndTime()) {
 			return false
 		}
 
@@ -190,8 +216,8 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 		func(ctx context.Context, dt *datekvs.Date) (*shpankids.TaskStats, error) {
 			userAssignableTasksByTaskId := functional.SliceToMapNoErr(
 				functional.FilterSlice(relevantUserTasks, func(t shpankids.FamilyTaskDto) bool {
-					return t.Created.Before(dt.Time) &&
-						(t.Status == shpankids.FamilyTaskStatusActive || t.StatusDate.After(dt.Time))
+					return t.Created.Before(dt.DateEndTime()) &&
+						(t.Status == shpankids.FamilyAssignmentStatusActive || t.StatusDate.After(dt.Time))
 				}),
 				func(t shpankids.FamilyTaskDto) string {
 					return t.TaskId
@@ -225,7 +251,13 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 
 }
 
-func (m *managerImpl) UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status shpankids.TaskStatus, comment string) error {
+func (m *managerImpl) UpdateTaskStatus(
+	ctx context.Context,
+	forDay time.Time,
+	taskId string,
+	status shpankids.AssignmentStatus,
+	comment string,
+) error {
 	userId, err := m.userSessionManager(ctx)
 	if err != nil {
 		return err

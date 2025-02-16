@@ -15,20 +15,20 @@
 
 import * as runtime from '../runtime';
 import type {
+  ApiAssignment,
   ApiCreateFamilyTaskCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
-  ApiTask,
   ApiTaskStats,
   ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
 } from '../models/index';
 import {
+    ApiAssignmentFromJSON,
+    ApiAssignmentToJSON,
     ApiCreateFamilyTaskCommandArgsFromJSON,
     ApiCreateFamilyTaskCommandArgsToJSON,
     ApiDeleteFamilyTaskCommandArgsFromJSON,
     ApiDeleteFamilyTaskCommandArgsToJSON,
-    ApiTaskFromJSON,
-    ApiTaskToJSON,
     ApiTaskStatsFromJSON,
     ApiTaskStatsToJSON,
     ApiUpdateFamilyTaskCommandArgsFromJSON,
@@ -154,28 +154,28 @@ export class ShpankidsApi extends runtime.BaseAPI {
     }
 
     /**
-     * list Tasks
+     * list Assignments
      */
-    async listTasksRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiTask>>> {
+    async listAssignmentsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiAssignment>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
         const response = await this.request({
-            path: `/api/tasks`,
+            path: `/api/assignments`,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiTaskFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiAssignmentFromJSON));
     }
 
     /**
-     * list Tasks
+     * list Assignments
      */
-    async listTasks(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiTask>> {
-        const response = await this.listTasksRaw(initOverrides);
+    async listAssignments(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiAssignment>> {
+        const response = await this.listAssignmentsRaw(initOverrides);
         return await response.value();
     }
 

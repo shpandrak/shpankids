@@ -7,21 +7,29 @@ import (
 	"time"
 )
 
-type TaskStatus string
+type AssignmentStatus string
 
 const (
-	StatusOpen       TaskStatus = "open"
-	StatusDone       TaskStatus = "done"
-	StatusBlocked    TaskStatus = "blocked"
-	StatusIrrelevant TaskStatus = "irrelevant"
+	StatusOpen       AssignmentStatus = "open"
+	StatusDone       AssignmentStatus = "done"
+	StatusBlocked    AssignmentStatus = "blocked"
+	StatusIrrelevant AssignmentStatus = "irrelevant"
 )
 
-type Task struct {
+type AssignmentType string
+
+const (
+	AssignmentTypeTask    AssignmentType = "task"
+	AssignmentTypeProblem AssignmentType = "problem"
+)
+
+type Assignment struct {
 	Id          string
+	ForDate     datekvs.Date
+	Type        AssignmentType
 	Title       string
+	Status      AssignmentStatus
 	Description string
-	DueDate     time.Time
-	Status      TaskStatus
 }
 
 type TaskStats struct {
@@ -31,8 +39,9 @@ type TaskStats struct {
 	DoneTasksCount  int
 }
 
-type TaskManager interface {
-	GetTasksForDate(ctx context.Context, date time.Time) ([]Task, error)
+type AssignmentManager interface {
+	ListAssignmentsForToday(ctx context.Context) ([]Assignment, error)
+	ListAssignmentsForDate(ctx context.Context, date datekvs.Date) ([]Assignment, error)
 	GetTaskStats(ctx context.Context, fromDate datekvs.Date, toDate datekvs.Date) shpanstream.Stream[TaskStats]
-	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status TaskStatus, comment string) error
+	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status AssignmentStatus, comment string) error
 }

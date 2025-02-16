@@ -7,6 +7,7 @@ import (
 type sessionRepository kvstore.JsonKvStore[string, dbSession]
 type dbSession struct {
 	FamilyId string `json:"familyId"`
+	TimeZone string `json:"timeZone"`
 }
 
 func newSessionRepository(store kvstore.RawJsonStore) sessionRepository {

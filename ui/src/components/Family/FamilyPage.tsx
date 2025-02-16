@@ -2,7 +2,7 @@ import * as React from "react";
 import UiCtx from "../Common/UiCtx.ts";
 import {shpanKidsApi, uiApi} from "../App.tsx";
 import {showError} from "../Util.ts";
-import {ApiFamilyTask, ApiTask, UIFamilyInfo} from "../../openapi";
+import {ApiFamilyTask, UIFamilyInfo} from "../../openapi";
 import FamilyTaskEditor from "./FamilyTaskEditor.tsx";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faTrash} from "@fortawesome/free-solid-svg-icons";

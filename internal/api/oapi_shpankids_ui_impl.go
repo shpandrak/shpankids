@@ -85,7 +85,7 @@ func (oa *OapiServerApiImpl) GetFamilyInfo(
 		FamilyUri:         family.Id,
 		Members:           uiFamilyMembers,
 		Tasks: functional.MapSliceWhileFilteringNoErr(familyTasks, func(task shpankids.FamilyTaskDto) *openapi.UIFamilyTask {
-			if task.Status == shpankids.FamilyTaskStatusActive {
+			if task.Status == shpankids.FamilyAssignmentStatusActive {
 				return &openapi.UIFamilyTask{
 					Description: castutil.StrToStrPtr(task.Description),
 					Id:          task.TaskId,

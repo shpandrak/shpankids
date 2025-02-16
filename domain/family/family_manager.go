@@ -119,7 +119,7 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 		Title:       familyTask.Title,
 		Description: familyTask.Description,
 		MemberIds:   familyTask.MemberIds,
-		Status:      shpankids.FamilyTaskStatusActive,
+		Status:      shpankids.FamilyAssignmentStatusActive,
 		Created:     familyTask.Created,
 		StatusDate:  familyTask.Created,
 	})
@@ -186,36 +186,30 @@ func (m *Manager) CreateFamilyProblem(
 				Correct:     a.Correct,
 			}
 		}),
-		Status:     shpankids.FamilyTaskStatusActive,
+		Status:     shpankids.FamilyAssignmentStatusActive,
 		StatusDate: familyProblem.Created,
 	})
 }
 
 func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
-	// Get the user email from the context
-	_, err := m.userSessionManager(ctx)
-	if err != nil {
-		return shpanstream.NewErrorStream[shpankids.FamilyTaskDto](err)
-	}
 	repo, err := newFamilyTaskRepository(ctx, m.kvs, familyId)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.FamilyTaskDto](err)
 	}
 	// Find the family tasks in repo
-	return shpanstream.MapStream(
-		repo.Stream(ctx),
-		func(e *functional.Entry[string, dbFamilyTask]) *shpankids.FamilyTaskDto {
-			return &shpankids.FamilyTaskDto{
-				TaskId:      e.Key,
-				Title:       e.Value.Title,
-				Description: e.Value.Description,
-				MemberIds:   e.Value.MemberIds,
-				Status:      e.Value.Status,
-				StatusDate:  e.Value.StatusDate,
-				Created:     e.Value.Created,
-			}
-		},
-	)
+	return shpanstream.MapStream(repo.Stream(ctx), mapFamilyTaskDbToDto)
+}
+
+func mapFamilyTaskDbToDto(e *functional.Entry[string, dbFamilyTask]) *shpankids.FamilyTaskDto {
+	return &shpankids.FamilyTaskDto{
+		TaskId:      e.Key,
+		Title:       e.Value.Title,
+		Description: e.Value.Description,
+		MemberIds:   e.Value.MemberIds,
+		Status:      e.Value.Status,
+		StatusDate:  e.Value.StatusDate,
+		Created:     e.Value.Created,
+	}
 }
 
 func (m *Manager) CreateFamily(
@@ -290,7 +284,44 @@ func (m *Manager) DeleteFamilyTask(ctx context.Context, familyId string, familyT
 	if err != nil {
 		return err
 	}
-	ft.Status = shpankids.FamilyTaskStatusDeleted
+	ft.Status = shpankids.FamilyAssignmentStatusDeleted
 	ft.StatusDate = time.Now()
 	return repo.Set(ctx, familyTaskId, ft)
+}
+
+func (m *Manager) ListFamilyProblemsForUser(
+	ctx context.Context,
+	familyId string,
+	userId string,
+) shpanstream.Stream[shpankids.FamilyProblemDto] {
+	// Get the user email from the context
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.FamilyProblemDto](err)
+	}
+	// Find the problems in repo
+	return shpanstream.MapStream(repo.Stream(ctx), mapFamilyProblemDbToDto)
+
+}
+
+func mapFamilyProblemDbToDto(e *functional.Entry[string, dbFamilyProblem]) *shpankids.FamilyProblemDto {
+	return &shpankids.FamilyProblemDto{
+		ProblemId:    e.Key,
+		Title:        e.Value.Title,
+		Description:  e.Value.Description,
+		Created:      e.Value.Created,
+		Status:       e.Value.Status,
+		StatusDate:   e.Value.StatusDate,
+		Hints:        e.Value.Hints,
+		Explanation:  e.Value.Explanation,
+		Alternatives: functional.MapSliceNoErr(e.Value.Alternatives, mapFamilyProblemAlternativeDbToDto),
+	}
+}
+
+func mapFamilyProblemAlternativeDbToDto(a dbProblemAlternative) shpankids.ProblemAlternativeDto {
+	return shpankids.ProblemAlternativeDto{
+		Title:       a.Title,
+		Description: a.Description,
+		Correct:     a.Correct,
+	}
 }

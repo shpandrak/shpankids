@@ -17,24 +17,24 @@
  * 
  * @export
  */
-export const ApiTaskStatus = {
+export const ApiAssignmentStatus = {
     Open: 'open',
     Done: 'done',
     Blocked: 'blocked',
     Irrelevant: 'irrelevant'
 } as const;
-export type ApiTaskStatus = typeof ApiTaskStatus[keyof typeof ApiTaskStatus];
+export type ApiAssignmentStatus = typeof ApiAssignmentStatus[keyof typeof ApiAssignmentStatus];
 
 
-export function ApiTaskStatusFromJSON(json: any): ApiTaskStatus {
-    return ApiTaskStatusFromJSONTyped(json, false);
+export function ApiAssignmentStatusFromJSON(json: any): ApiAssignmentStatus {
+    return ApiAssignmentStatusFromJSONTyped(json, false);
 }
 
-export function ApiTaskStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiTaskStatus {
-    return json as ApiTaskStatus;
+export function ApiAssignmentStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiAssignmentStatus {
+    return json as ApiAssignmentStatus;
 }
 
-export function ApiTaskStatusToJSON(value?: ApiTaskStatus | null): any {
+export function ApiAssignmentStatusToJSON(value?: ApiAssignmentStatus | null): any {
     return value as any;
 }
 

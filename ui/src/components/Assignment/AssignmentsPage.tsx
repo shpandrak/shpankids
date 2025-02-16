@@ -2,21 +2,21 @@ import * as React from "react";
 import UiCtx from "../Common/UiCtx.ts";
 import {shpanKidsApi} from "../App.tsx";
 import {showError} from "../Util.ts";
-import {ApiTask} from "../../openapi";
+import {ApiAssignment} from "../../openapi";
 
 
 export interface TasksPageProps {
     uiCtx: UiCtx;
 }
 
-const TasksPage: React.FC<TasksPageProps> = (props) => {
-    const [tasks, setTasks] = React.useState<ApiTask[]>([]);
+const AssignmentsPage: React.FC<TasksPageProps> = (props) => {
+    const [assignments, setAssignments] = React.useState<ApiAssignment[]>([]);
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
-        shpanKidsApi.listTasks()
-            .then(tasks => tasks.sort((a, b) => a.id.localeCompare(b.id)))
-            .then(setTasks)
+        shpanKidsApi.listAssignments()
+            .then(assignments => assignments.sort((a, b) => a.id.localeCompare(b.id)))
+            .then(setAssignments)
             .then(() => setLoading(false))
             .catch(showError);
 
@@ -27,21 +27,21 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
             <h2>Today's tasks</h2>
             {loading && <div>Loading...</div>}
             <ol>
-                {tasks.map((task) => (
-                    <li style={{textDecoration: task.status == "done" ? "line-through" : "auto"}}
-                        key={task.id}>{task.title}
-                        {task.status == "open" && (
+                {assignments.map((assignment) => (
+                    <li style={{textDecoration: assignment.status == "done" ? "line-through" : "auto"}}
+                        key={assignment.id}>{assignment.title}
+                        {assignment.type == "task" &&  assignment.status == "open" && (
                             <button onClick={() => {
                                 shpanKidsApi.updateTaskStatus({
                                     apiUpdateTaskStatusCommandArgs: {
-                                        taskId: task.id,
+                                        taskId: assignment.id,
                                         status: "done",
-                                        forDate: task.forDate
+                                        forDate: assignment.forDate
                                     }
                                 })
                                     .then(() => {
-                                        setTasks(tasks.map((t) => {
-                                            if (t.id === task.id) {
+                                        setAssignments(assignments.map((t) => {
+                                            if (t.id === assignment.id) {
                                                 return {...t, status: "done"};
                                             }
                                             return t;
@@ -52,18 +52,18 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
                             }}>Done
                             </button>
                         )}
-                        {task.status == "done" && (
+                        {assignment.type == "task" && assignment.status == "done" && (
                             <button onClick={() => {
                                 shpanKidsApi.updateTaskStatus({
                                     apiUpdateTaskStatusCommandArgs: {
-                                        taskId: task.id,
+                                        taskId: assignment.id,
                                         status: "open",
-                                        forDate: task.forDate
+                                        forDate: assignment.forDate
                                     }
                                 })
                                     .then(() => {
-                                        setTasks(tasks.map((t) => {
-                                            if (t.id === task.id) {
+                                        setAssignments(assignments.map((t) => {
+                                            if (t.id === assignment.id) {
                                                 return {...t, status: "open"};
                                             }
                                             return t;
@@ -83,4 +83,4 @@ const TasksPage: React.FC<TasksPageProps> = (props) => {
     );
 
 }
-export default TasksPage;
+export default AssignmentsPage;
