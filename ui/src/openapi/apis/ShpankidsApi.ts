@@ -18,6 +18,8 @@ import type {
   ApiAssignment,
   ApiCreateFamilyTaskCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
+  ApiLoadProblemForAssignmentCommandArgs,
+  ApiLoadProblemForAssignmentCommandResult,
   ApiTaskStats,
   ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
@@ -29,6 +31,10 @@ import {
     ApiCreateFamilyTaskCommandArgsToJSON,
     ApiDeleteFamilyTaskCommandArgsFromJSON,
     ApiDeleteFamilyTaskCommandArgsToJSON,
+    ApiLoadProblemForAssignmentCommandArgsFromJSON,
+    ApiLoadProblemForAssignmentCommandArgsToJSON,
+    ApiLoadProblemForAssignmentCommandResultFromJSON,
+    ApiLoadProblemForAssignmentCommandResultToJSON,
     ApiTaskStatsFromJSON,
     ApiTaskStatsToJSON,
     ApiUpdateFamilyTaskCommandArgsFromJSON,
@@ -48,6 +54,10 @@ export interface DeleteFamilyTaskRequest {
 export interface GetStatsRequest {
     from?: Date;
     to?: Date;
+}
+
+export interface LoadProblemForAssignmentRequest {
+    apiLoadProblemForAssignmentCommandArgs?: ApiLoadProblemForAssignmentCommandArgs;
 }
 
 export interface UpdateFamilyTaskRequest {
@@ -176,6 +186,35 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async listAssignments(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiAssignment>> {
         const response = await this.listAssignmentsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Loads next problem for assignment
+     */
+    async loadProblemForAssignmentRaw(requestParameters: LoadProblemForAssignmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ApiLoadProblemForAssignmentCommandResult>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/load-problem-for-assignment`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiLoadProblemForAssignmentCommandArgsToJSON(requestParameters['apiLoadProblemForAssignmentCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ApiLoadProblemForAssignmentCommandResultFromJSON(jsonValue));
+    }
+
+    /**
+     * Loads next problem for assignment
+     */
+    async loadProblemForAssignment(requestParameters: LoadProblemForAssignmentRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiLoadProblemForAssignmentCommandResult> {
+        const response = await this.loadProblemForAssignmentRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

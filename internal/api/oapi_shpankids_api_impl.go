@@ -22,6 +22,53 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) LoadProblemForAssignment(
+	ctx context.Context,
+	request openapi.LoadProblemForAssignmentRequestObject,
+) (openapi.LoadProblemForAssignmentResponseObject, error) {
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
+	first, err := shpanstream.MapStreamWithError(
+		oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, *userId, request.Body.AssignmentId),
+		toApiProblem,
+	).FindFirst(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ret := first.AsPtr()
+	if ret == nil {
+		return nil, util.NotFoundError(fmt.Errorf("no problems found for set"))
+	} else {
+		return &openapi.LoadProblemForAssignment200JSONResponse{Problem: *ret}, nil
+	}
+
+}
+
+func toApiProblem(_ context.Context, p *shpankids.FamilyProblemDto) (*openapi.ApiProblem, error) {
+	mapAnswers, err := functional.MapSliceWithIdx(p.Alternatives, func(idx int, a shpankids.ProblemAlternativeDto) (openapi.ApiProblemAnswer, error) {
+		return openapi.ApiProblemAnswer{
+			Id:    fmt.Sprintf("%d", idx),
+			Title: a.Title,
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.ApiProblem{
+		Description: castutil.StrToStrPtr(p.Description),
+		Id:          p.ProblemId,
+		Title:       p.Title,
+		Answers:     mapAnswers,
+	}, nil
+}
+
 func (oa *OapiServerApiImpl) GetStats(
 	ctx context.Context,
 	request openapi.GetStatsRequestObject,
@@ -76,6 +123,15 @@ func (s *streamingGetStatsResponseObject) VisitGetStatsResponse(w http.ResponseW
 	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
 }
 
+type streamingAssignments struct {
+	stream shpanstream.Stream[openapi.ApiAssignment]
+	ctx    context.Context
+}
+
+func (s *streamingAssignments) VisitListAssignmentsResponse(w http.ResponseWriter) error {
+	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
+}
+
 func NewOapiServerApiImpl(
 	userSessionManager shpankids.UserSessionManager,
 	userManager shpankids.UserManager,
@@ -97,15 +153,15 @@ func (oa *OapiServerApiImpl) ListAssignments(
 	ctx context.Context,
 	_ openapi.ListAssignmentsRequestObject,
 ) (openapi.ListAssignmentsResponseObject, error) {
-	AssignmentList, err := oa.assignmentManager.ListAssignmentsForToday(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return openapi.ListAssignments200JSONResponse(functional.MapSliceNoErr(AssignmentList, toUiAssignment)), nil
+	return &streamingAssignments{
+		ctx:    ctx,
+		stream: shpanstream.MapStream[shpankids.Assignment, openapi.ApiAssignment](oa.assignmentManager.ListAssignmentsForToday(ctx), toApiAssignment),
+	}, nil
+
 }
 
-func toUiAssignment(a shpankids.Assignment) openapi.ApiAssignment {
-	return openapi.ApiAssignment{
+func toApiAssignment(a *shpankids.Assignment) *openapi.ApiAssignment {
+	return &openapi.ApiAssignment{
 		Description: castutil.ValToValPtr(a.Description),
 		ForDate:     a.ForDate.Time,
 		Id:          a.Id,

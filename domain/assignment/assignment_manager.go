@@ -20,15 +20,15 @@ type managerImpl struct {
 	familyManager      shpankids.FamilyManager
 }
 
-func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) ([]shpankids.Assignment, error) {
+func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) shpanstream.Stream[shpankids.Assignment] {
 	userId, err := m.userSessionManager(ctx)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
 	s, err := m.sessionManager.Get(ctx, *userId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
 	return m.doListAssignments(ctx, datekvs.TodayDate(s.Location), s.FamilyId, *userId)
@@ -100,32 +100,35 @@ func (m *managerImpl) GetTaskStats(
 	)
 }
 
-func (m *managerImpl) ListAssignmentsForDate(ctx context.Context, forDate datekvs.Date) ([]shpankids.Assignment, error) {
-	userId, err := m.userSessionManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := m.sessionManager.Get(ctx, *userId)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.doListAssignments(ctx, forDate, s.FamilyId, *userId)
-}
-
 func (m *managerImpl) doListAssignments(
 	ctx context.Context,
 	forDate datekvs.Date,
 	familyId string,
 	userId string,
-) ([]shpankids.Assignment, error) {
+) shpanstream.Stream[shpankids.Assignment] {
 	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, familyId).CollectFilterNil(ctx)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
-	return m.filterTaskAssignmentsForUser(ctx, forDate, familyTasks, userId)
+	//todo:amit:just return a stream from here...
+	return shpanstream.ConcatenatedStream(
+		m.filterTaskAssignmentsForUser(ctx, forDate, familyTasks, userId),
+		shpanstream.MapStream(m.familyManager.ListFamilyProblemSetsForUser(ctx, familyId, userId), func(fps *shpankids.FamilyProblemSetDto) *shpankids.Assignment {
+			return mapProblemSetToAssignment(fps, forDate)
+		},
+		))
+}
+
+func mapProblemSetToAssignment(fps *shpankids.FamilyProblemSetDto, forDate datekvs.Date) *shpankids.Assignment {
+	return &shpankids.Assignment{
+		Id:          fps.ProblemSetId,
+		ForDate:     forDate,
+		Type:        shpankids.AssignmentTypeProblemSet,
+		Title:       fps.Title,
+		Status:      shpankids.StatusOpen,
+		Description: fps.Description,
+	}
 }
 
 func (m *managerImpl) filterTaskAssignmentsForUser(
@@ -133,7 +136,7 @@ func (m *managerImpl) filterTaskAssignmentsForUser(
 	forDate datekvs.Date,
 	familyTasks []shpankids.FamilyTaskDto,
 	userId string,
-) ([]shpankids.Assignment, error) {
+) shpanstream.Stream[shpankids.Assignment] {
 	tasks := functional.MapSliceWhileFilteringNoErr(familyTasks, func(ft shpankids.FamilyTaskDto) **shpankids.Assignment {
 
 		// Filtering away tasks that were deleted after the forDate
@@ -157,26 +160,26 @@ func (m *managerImpl) filterTaskAssignmentsForUser(
 		})
 	})
 
-	tasksById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Assignment) string {
+	assignmentsById := functional.SliceToMapNoErr(tasks, func(t *shpankids.Assignment) string {
 		return t.Id
 	})
 
 	userTaskRepo, err := NewUserTaskStatusRepository(ctx, m.kvs, userId)
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
 	err = userTaskRepo.GetAllForDate(ctx, forDate).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
-		foundTask, found := tasksById[dr.Key]
+		foundTask, found := assignmentsById[dr.Key]
 		if found {
 			foundTask.Status = dr.Value.Status
 		}
 	})
 	if err != nil {
-		return nil, err
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
-	return functional.MapSliceUnPtr(functional.MapValues(tasksById)), nil
+	return shpanstream.Just[shpankids.Assignment](functional.MapSliceUnPtr(functional.MapValues(assignmentsById))...)
 }
 
 func (m *managerImpl) getUserTaskStatesForDateRange(

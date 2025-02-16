@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ApiProblemAnswer } from './ApiProblemAnswer';
+import {
+    ApiProblemAnswerFromJSON,
+    ApiProblemAnswerFromJSONTyped,
+    ApiProblemAnswerToJSON,
+} from './ApiProblemAnswer';
+
 /**
  * 
  * @export
@@ -39,10 +46,10 @@ export interface ApiProblem {
     description?: string;
     /**
      * 
-     * @type {Array<string>}
+     * @type {Array<ApiProblemAnswer>}
      * @memberof ApiProblem
      */
-    answers?: Array<string>;
+    answers: Array<ApiProblemAnswer>;
 }
 
 /**
@@ -51,6 +58,7 @@ export interface ApiProblem {
 export function instanceOfApiProblem(value: object): boolean {
     if (!('id' in value)) return false;
     if (!('title' in value)) return false;
+    if (!('answers' in value)) return false;
     return true;
 }
 
@@ -67,7 +75,7 @@ export function ApiProblemFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         'id': json['id'],
         'title': json['title'],
         'description': json['description'] == null ? undefined : json['description'],
-        'answers': json['answers'] == null ? undefined : json['answers'],
+        'answers': ((json['answers'] as Array<any>).map(ApiProblemAnswerFromJSON)),
     };
 }
 
@@ -80,7 +88,7 @@ export function ApiProblemToJSON(value?: ApiProblem | null): any {
         'id': value['id'],
         'title': value['title'],
         'description': value['description'],
-        'answers': value['answers'],
+        'answers': ((value['answers'] as Array<any>).map(ApiProblemAnswerToJSON)),
     };
 }
 

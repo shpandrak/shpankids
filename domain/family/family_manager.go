@@ -124,11 +124,27 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 		StatusDate:  familyTask.Created,
 	})
 }
+func (m *Manager) CreateFamilyProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet shpankids.FamilyProblemSetDto) error {
+	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, forUserId)
+	if err != nil {
+		return err
+	}
+	// Create the family task in repo
+	familyProblemSet.Created = time.Now()
+	return psRepo.Set(ctx, familyProblemSet.ProblemSetId, dbFamilyProblemSet{
+		Title:       familyProblemSet.Title,
+		Description: familyProblemSet.Description,
+		Created:     familyProblemSet.Created,
+		Status:      shpankids.FamilyAssignmentStatusActive,
+		StatusDate:  familyProblemSet.Created,
+	})
+}
 
 func (m *Manager) CreateFamilyProblem(
 	ctx context.Context,
 	familyId string,
 	forUserId string,
+	problemSetId string,
 	familyProblem shpankids.FamilyProblemDto,
 ) error {
 	if familyProblem.ProblemId == "" {
@@ -166,13 +182,12 @@ func (m *Manager) CreateFamilyProblem(
 		return util.BadInputError(fmt.Errorf("user %s is not part of the family %s", forUserId, f.Name))
 	}
 
-	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, forUserId)
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, forUserId, problemSetId)
 	if err != nil {
 		return err
 	}
 
 	// Create the family task in repo
-	familyProblem.Created = time.Now()
 	return repo.Set(ctx, familyProblem.ProblemId, dbFamilyProblem{
 		Title:       familyProblem.Title,
 		Description: familyProblem.Description,
@@ -186,8 +201,6 @@ func (m *Manager) CreateFamilyProblem(
 				Correct:     a.Correct,
 			}
 		}),
-		Status:     shpankids.FamilyAssignmentStatusActive,
-		StatusDate: familyProblem.Created,
 	})
 }
 
@@ -289,13 +302,28 @@ func (m *Manager) DeleteFamilyTask(ctx context.Context, familyId string, familyT
 	return repo.Set(ctx, familyTaskId, ft)
 }
 
+func (m *Manager) ListFamilyProblemSetsForUser(
+	ctx context.Context,
+	familyId string,
+	userId string,
+) shpanstream.Stream[shpankids.FamilyProblemSetDto] {
+
+	repo, err := newProblemSetsRepository(ctx, m.kvs, familyId, userId)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.FamilyProblemSetDto](err)
+	}
+	// Find the problems in repo
+	return shpanstream.MapStream(repo.Stream(ctx), mapFamilyProblemSetDbToDto)
+}
+
 func (m *Manager) ListFamilyProblemsForUser(
 	ctx context.Context,
 	familyId string,
 	userId string,
+	problemSetId string,
 ) shpanstream.Stream[shpankids.FamilyProblemDto] {
 	// Get the user email from the context
-	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId)
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.FamilyProblemDto](err)
 	}
@@ -310,11 +338,20 @@ func mapFamilyProblemDbToDto(e *functional.Entry[string, dbFamilyProblem]) *shpa
 		Title:        e.Value.Title,
 		Description:  e.Value.Description,
 		Created:      e.Value.Created,
-		Status:       e.Value.Status,
-		StatusDate:   e.Value.StatusDate,
 		Hints:        e.Value.Hints,
 		Explanation:  e.Value.Explanation,
 		Alternatives: functional.MapSliceNoErr(e.Value.Alternatives, mapFamilyProblemAlternativeDbToDto),
+	}
+}
+
+func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbFamilyProblemSet]) *shpankids.FamilyProblemSetDto {
+	return &shpankids.FamilyProblemSetDto{
+		ProblemSetId: e.Key,
+		Title:        e.Value.Title,
+		Description:  e.Value.Description,
+		Created:      e.Value.Created,
+		Status:       e.Value.Status,
+		StatusDate:   e.Value.StatusDate,
 	}
 }
 

@@ -33,8 +33,8 @@ const (
 
 // Defines values for ApiAssignmentType.
 const (
-	Problem ApiAssignmentType = "problem"
-	Task    ApiAssignmentType = "task"
+	ProblemSet ApiAssignmentType = "problemSet"
+	Task       ApiAssignmentType = "task"
 )
 
 // Defines values for ApiFamilyRole.
@@ -77,6 +77,31 @@ type ApiFamilyTask struct {
 	Description *string  `json:"description,omitempty"`
 	MemberIds   []string `json:"memberIds"`
 	Title       string   `json:"title"`
+}
+
+// ApiLoadProblemForAssignmentCommandArgs defines model for ApiLoadProblemForAssignmentCommandArgs.
+type ApiLoadProblemForAssignmentCommandArgs struct {
+	AssignmentId string    `json:"assignmentId"`
+	ForDate      time.Time `json:"forDate"`
+}
+
+// ApiLoadProblemForAssignmentCommandResult defines model for ApiLoadProblemForAssignmentCommandResult.
+type ApiLoadProblemForAssignmentCommandResult struct {
+	Problem ApiProblem `json:"problem"`
+}
+
+// ApiProblem defines model for ApiProblem.
+type ApiProblem struct {
+	Answers     []ApiProblemAnswer `json:"answers"`
+	Description *string            `json:"description,omitempty"`
+	Id          string             `json:"id"`
+	Title       string             `json:"title"`
+}
+
+// ApiProblemAnswer defines model for ApiProblemAnswer.
+type ApiProblemAnswer struct {
+	Id    string `json:"id"`
+	Title string `json:"title"`
 }
 
 // ApiTaskStats defines model for ApiTaskStats.
@@ -149,6 +174,9 @@ type CreateFamilyTaskJSONRequestBody = ApiCreateFamilyTaskCommandArgs
 // DeleteFamilyTaskJSONRequestBody defines body for DeleteFamilyTask for application/json ContentType.
 type DeleteFamilyTaskJSONRequestBody = ApiDeleteFamilyTaskCommandArgs
 
+// LoadProblemForAssignmentJSONRequestBody defines body for LoadProblemForAssignment for application/json ContentType.
+type LoadProblemForAssignmentJSONRequestBody = ApiLoadProblemForAssignmentCommandArgs
+
 // UpdateFamilyTaskJSONRequestBody defines body for UpdateFamilyTask for application/json ContentType.
 type UpdateFamilyTaskJSONRequestBody = ApiUpdateFamilyTaskCommandArgs
 
@@ -166,6 +194,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/load-problem-for-assignment)
+	LoadProblemForAssignment(w http.ResponseWriter, r *http.Request)
 
 	// (POST /api/commands/update-family-task)
 	UpdateFamilyTask(w http.ResponseWriter, r *http.Request)
@@ -228,6 +259,21 @@ func (siw *ServerInterfaceWrapper) DeleteFamilyTask(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteFamilyTask(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// LoadProblemForAssignment operation middleware
+func (siw *ServerInterfaceWrapper) LoadProblemForAssignment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LoadProblemForAssignment(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -452,6 +498,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/delete-family-task", wrapper.DeleteFamilyTask).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/commands/load-problem-for-assignment", wrapper.LoadProblemForAssignment).Methods("POST")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/update-family-task", wrapper.UpdateFamilyTask).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-task-status", wrapper.UpdateTaskStatus).Methods("POST")
@@ -511,6 +559,23 @@ type DeleteFamilyTask200Response struct {
 func (response DeleteFamilyTask200Response) VisitDeleteFamilyTaskResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
+}
+
+type LoadProblemForAssignmentRequestObject struct {
+	Body *LoadProblemForAssignmentJSONRequestBody
+}
+
+type LoadProblemForAssignmentResponseObject interface {
+	VisitLoadProblemForAssignmentResponse(w http.ResponseWriter) error
+}
+
+type LoadProblemForAssignment200JSONResponse ApiLoadProblemForAssignmentCommandResult
+
+func (response LoadProblemForAssignment200JSONResponse) VisitLoadProblemForAssignmentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type UpdateFamilyTaskRequestObject struct {
@@ -605,6 +670,9 @@ type StrictServerInterface interface {
 
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(ctx context.Context, request DeleteFamilyTaskRequestObject) (DeleteFamilyTaskResponseObject, error)
+
+	// (POST /api/commands/load-problem-for-assignment)
+	LoadProblemForAssignment(ctx context.Context, request LoadProblemForAssignmentRequestObject) (LoadProblemForAssignmentResponseObject, error)
 
 	// (POST /api/commands/update-family-task)
 	UpdateFamilyTask(ctx context.Context, request UpdateFamilyTaskRequestObject) (UpdateFamilyTaskResponseObject, error)
@@ -730,6 +798,37 @@ func (sh *strictHandler) DeleteFamilyTask(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteFamilyTaskResponseObject); ok {
 		if err := validResponse.VisitDeleteFamilyTaskResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LoadProblemForAssignment operation middleware
+func (sh *strictHandler) LoadProblemForAssignment(w http.ResponseWriter, r *http.Request) {
+	var request LoadProblemForAssignmentRequestObject
+
+	var body LoadProblemForAssignmentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LoadProblemForAssignment(ctx, request.(LoadProblemForAssignmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LoadProblemForAssignment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoadProblemForAssignmentResponseObject); ok {
+		if err := validResponse.VisitLoadProblemForAssignmentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -876,23 +975,26 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"bi/eh/vDfwEAAP//8BPpA/EZAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
