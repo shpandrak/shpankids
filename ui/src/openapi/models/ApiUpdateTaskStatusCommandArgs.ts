@@ -13,12 +13,12 @@
  */
 
 import { mapValues } from '../runtime';
-import type { ApiTaskStatus } from './ApiTaskStatus';
+import type { ApiAssignmentStatus } from './ApiAssignmentStatus';
 import {
-    ApiTaskStatusFromJSON,
-    ApiTaskStatusFromJSONTyped,
-    ApiTaskStatusToJSON,
-} from './ApiTaskStatus';
+    ApiAssignmentStatusFromJSON,
+    ApiAssignmentStatusFromJSONTyped,
+    ApiAssignmentStatusToJSON,
+} from './ApiAssignmentStatus';
 
 /**
  * 
@@ -40,10 +40,10 @@ export interface ApiUpdateTaskStatusCommandArgs {
     forDate: Date;
     /**
      * 
-     * @type {ApiTaskStatus}
+     * @type {ApiAssignmentStatus}
      * @memberof ApiUpdateTaskStatusCommandArgs
      */
-    status: ApiTaskStatus;
+    status: ApiAssignmentStatus;
     /**
      * 
      * @type {string}
@@ -74,7 +74,7 @@ export function ApiUpdateTaskStatusCommandArgsFromJSONTyped(json: any, ignoreDis
         
         'taskId': json['taskId'],
         'forDate': (new Date(json['forDate'])),
-        'status': ApiTaskStatusFromJSON(json['status']),
+        'status': ApiAssignmentStatusFromJSON(json['status']),
         'comment': json['comment'] == null ? undefined : json['comment'],
     };
 }
@@ -87,7 +87,7 @@ export function ApiUpdateTaskStatusCommandArgsToJSON(value?: ApiUpdateTaskStatus
         
         'taskId': value['taskId'],
         'forDate': ((value['forDate']).toISOString()),
-        'status': ApiTaskStatusToJSON(value['status']),
+        'status': ApiAssignmentStatusToJSON(value['status']),
         'comment': value['comment'],
     };
 }

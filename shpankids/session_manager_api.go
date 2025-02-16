@@ -2,10 +2,12 @@ package shpankids
 
 import (
 	"context"
+	"time"
 )
 
 type Session struct {
 	FamilyId string
+	Location *time.Location
 }
 
 type SessionManager interface {

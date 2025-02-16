@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/shpanstream"
+	"shpankids/infra/util/castutil"
 	"shpankids/infra/util/functional"
 	"shpankids/internal/infra/util"
 	"shpankids/openapi"
@@ -16,7 +17,7 @@ import (
 type OapiServerApiImpl struct {
 	userSessionManager shpankids.UserSessionManager
 	userManager        shpankids.UserManager
-	taskManager        shpankids.TaskManager
+	assignmentManager  shpankids.AssignmentManager
 	familyManager      shpankids.FamilyManager
 	sessionManager     shpankids.SessionManager
 }
@@ -25,21 +26,34 @@ func (oa *OapiServerApiImpl) GetStats(
 	ctx context.Context,
 	request openapi.GetStatsRequestObject,
 ) (openapi.GetStatsResponseObject, error) {
+
 	from := *datekvs.NewDateFromTime(time.Now())
 	to := from
 
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo:add put session in context, avoid accessing multiple times
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
 	if request.Params.From != nil {
-		from = *datekvs.NewDateFromTime(*request.Params.From)
+		from = *datekvs.NewDateFromTime(request.Params.From.In(s.Location))
 	}
 	if request.Params.To != nil {
-		to = *datekvs.NewDateFromTime(*request.Params.To)
+		to = *datekvs.NewDateFromTime(request.Params.To.In(s.Location))
 	}
+
 	if to.Before(from.Time) {
 		return nil, util.BadInputError(fmt.Errorf("to date is before from date"))
 	}
 	return &streamingGetStatsResponseObject{
 		stream: shpanstream.MapStream[shpankids.TaskStats, openapi.ApiTaskStats](
-			oa.taskManager.GetTaskStats(ctx, from, to),
+			oa.assignmentManager.GetTaskStats(ctx, from, to),
 			func(s *shpankids.TaskStats) *openapi.ApiTaskStats {
 				return &openapi.ApiTaskStats{
 					UserId:          s.UserId,
@@ -65,7 +79,7 @@ func (s *streamingGetStatsResponseObject) VisitGetStatsResponse(w http.ResponseW
 func NewOapiServerApiImpl(
 	userSessionManager shpankids.UserSessionManager,
 	userManager shpankids.UserManager,
-	taskManager shpankids.TaskManager,
+	assignmentManager shpankids.AssignmentManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
 
@@ -73,34 +87,30 @@ func NewOapiServerApiImpl(
 	return &OapiServerApiImpl{
 		userSessionManager: userSessionManager,
 		userManager:        userManager,
-		taskManager:        taskManager,
+		assignmentManager:  assignmentManager,
 		familyManager:      familyManager,
 		sessionManager:     sessionManager,
 	}
 }
 
-func (oa *OapiServerApiImpl) ListTasks(
+func (oa *OapiServerApiImpl) ListAssignments(
 	ctx context.Context,
-	_ openapi.ListTasksRequestObject,
-) (openapi.ListTasksResponseObject, error) {
-	forDate := GetTodayForDate()
-	taskList, err := oa.taskManager.GetTasksForDate(ctx, forDate)
+	_ openapi.ListAssignmentsRequestObject,
+) (openapi.ListAssignmentsResponseObject, error) {
+	AssignmentList, err := oa.assignmentManager.ListAssignmentsForToday(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return openapi.ListTasks200JSONResponse(
-		functional.MapSliceNoErr(taskList, func(t shpankids.Task) openapi.ApiTask {
-			return openapi.ApiTask{
-				Id:          t.Id,
-				Title:       t.Title,
-				Description: t.Description,
-				ForDate:     forDate,
-				Status:      openapi.ApiTaskStatus(t.Status),
-			}
-		})), nil
-
+	return openapi.ListAssignments200JSONResponse(functional.MapSliceNoErr(AssignmentList, toUiAssignment)), nil
 }
 
-func GetTodayForDate() time.Time {
-	return time.Now().Truncate(24 * time.Hour)
+func toUiAssignment(a shpankids.Assignment) openapi.ApiAssignment {
+	return openapi.ApiAssignment{
+		Description: castutil.ValToValPtr(a.Description),
+		ForDate:     a.ForDate.Time,
+		Id:          a.Id,
+		Status:      openapi.ApiAssignmentStatus(a.Status),
+		Title:       a.Title,
+		Type:        openapi.ApiAssignmentType(a.Type),
+	}
 }

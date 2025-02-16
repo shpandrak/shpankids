@@ -9,14 +9,14 @@ import (
 )
 
 type dbFamilyProblem struct {
-	Title        string                     `json:"title"`
-	Description  string                     `json:"description"`
-	Created      time.Time                  `json:"created"`
-	Hints        []string                   `json:"hints,omitempty"`
-	Explanation  string                     `json:"explanation,omitempty"`
-	Alternatives []dbProblemAlternative     `json:"alternatives"`
-	Status       shpankids.FamilyTaskStatus `json:"status"`
-	StatusDate   time.Time                  `json:"statusDate"`
+	Title        string                           `json:"title"`
+	Description  string                           `json:"description"`
+	Created      time.Time                        `json:"created"`
+	Hints        []string                         `json:"hints,omitempty"`
+	Explanation  string                           `json:"explanation,omitempty"`
+	Alternatives []dbProblemAlternative           `json:"alternatives"`
+	Status       shpankids.FamilyAssignmentStatus `json:"status"`
+	StatusDate   time.Time                        `json:"statusDate"`
 }
 
 type dbProblemAlternative struct {

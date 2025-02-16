@@ -23,19 +23,41 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ApiAssignmentStatus.
+const (
+	Blocked    ApiAssignmentStatus = "blocked"
+	Done       ApiAssignmentStatus = "done"
+	Irrelevant ApiAssignmentStatus = "irrelevant"
+	Open       ApiAssignmentStatus = "open"
+)
+
+// Defines values for ApiAssignmentType.
+const (
+	Problem ApiAssignmentType = "problem"
+	Task    ApiAssignmentType = "task"
+)
+
 // Defines values for ApiFamilyRole.
 const (
 	Admin  ApiFamilyRole = "admin"
 	Member ApiFamilyRole = "member"
 )
 
-// Defines values for ApiTaskStatus.
-const (
-	Blocked    ApiTaskStatus = "blocked"
-	Done       ApiTaskStatus = "done"
-	Irrelevant ApiTaskStatus = "irrelevant"
-	Open       ApiTaskStatus = "open"
-)
+// ApiAssignment defines model for ApiAssignment.
+type ApiAssignment struct {
+	Description *string             `json:"description,omitempty"`
+	ForDate     time.Time           `json:"forDate"`
+	Id          string              `json:"id"`
+	Status      ApiAssignmentStatus `json:"status"`
+	Title       string              `json:"title"`
+	Type        ApiAssignmentType   `json:"type"`
+}
+
+// ApiAssignmentStatus defines model for ApiAssignmentStatus.
+type ApiAssignmentStatus string
+
+// ApiAssignmentType defines model for ApiAssignmentType.
+type ApiAssignmentType string
 
 // ApiCreateFamilyTaskCommandArgs defines model for ApiCreateFamilyTaskCommandArgs.
 type ApiCreateFamilyTaskCommandArgs struct {
@@ -57,16 +79,6 @@ type ApiFamilyTask struct {
 	Title       string   `json:"title"`
 }
 
-// ApiTask Task
-type ApiTask struct {
-	Description string        `json:"description"`
-	DueDate     *time.Time    `json:"dueDate,omitempty"`
-	ForDate     time.Time     `json:"forDate"`
-	Id          string        `json:"id"`
-	Status      ApiTaskStatus `json:"status"`
-	Title       string        `json:"title"`
-}
-
 // ApiTaskStats defines model for ApiTaskStats.
 type ApiTaskStats struct {
 	DoneTasksCount  int       `json:"doneTasksCount"`
@@ -75,9 +87,6 @@ type ApiTaskStats struct {
 	UserId          string    `json:"userId"`
 }
 
-// ApiTaskStatus defines model for ApiTaskStatus.
-type ApiTaskStatus string
-
 // ApiUpdateFamilyTaskCommandArgs defines model for ApiUpdateFamilyTaskCommandArgs.
 type ApiUpdateFamilyTaskCommandArgs struct {
 	Task ApiFamilyTask `json:"task"`
@@ -85,10 +94,10 @@ type ApiUpdateFamilyTaskCommandArgs struct {
 
 // ApiUpdateTaskStatusCommandArgs defines model for ApiUpdateTaskStatusCommandArgs.
 type ApiUpdateTaskStatusCommandArgs struct {
-	Comment *string       `json:"comment,omitempty"`
-	ForDate time.Time     `json:"forDate"`
-	Status  ApiTaskStatus `json:"status"`
-	TaskId  string        `json:"taskId"`
+	Comment *string             `json:"comment,omitempty"`
+	ForDate time.Time           `json:"forDate"`
+	Status  ApiAssignmentStatus `json:"status"`
+	TaskId  string              `json:"taskId"`
 }
 
 // UIFamilyInfo Family info
@@ -149,6 +158,9 @@ type UpdateTaskStatusJSONRequestBody = ApiUpdateTaskStatusCommandArgs
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /api/assignments)
+	ListAssignments(w http.ResponseWriter, r *http.Request)
+
 	// (POST /api/commands/create-family-task)
 	CreateFamilyTask(w http.ResponseWriter, r *http.Request)
 
@@ -163,9 +175,6 @@ type ServerInterface interface {
 
 	// (GET /api/stats)
 	GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams)
-
-	// (GET /api/tasks)
-	ListTasks(w http.ResponseWriter, r *http.Request)
 
 	// (GET /api/ui/familyInfo)
 	GetFamilyInfo(w http.ResponseWriter, r *http.Request)
@@ -182,6 +191,21 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListAssignments operation middleware
+func (siw *ServerInterfaceWrapper) ListAssignments(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAssignments(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // CreateFamilyTask operation middleware
 func (siw *ServerInterfaceWrapper) CreateFamilyTask(w http.ResponseWriter, r *http.Request) {
@@ -270,21 +294,6 @@ func (siw *ServerInterfaceWrapper) GetStats(w http.ResponseWriter, r *http.Reque
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetStats(w, r, params)
-	}))
-
-	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
-		handler = siw.HandlerMiddlewares[i](handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// ListTasks operation middleware
-func (siw *ServerInterfaceWrapper) ListTasks(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTasks(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -437,6 +446,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	r.HandleFunc(options.BaseURL+"/api/assignments", wrapper.ListAssignments).Methods("GET")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/create-family-task", wrapper.CreateFamilyTask).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/delete-family-task", wrapper.DeleteFamilyTask).Methods("POST")
@@ -447,13 +458,27 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/stats", wrapper.GetStats).Methods("GET")
 
-	r.HandleFunc(options.BaseURL+"/api/tasks", wrapper.ListTasks).Methods("GET")
-
 	r.HandleFunc(options.BaseURL+"/api/ui/familyInfo", wrapper.GetFamilyInfo).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/api/ui/userInfo", wrapper.GetUserInfo).Methods("GET")
 
 	return r
+}
+
+type ListAssignmentsRequestObject struct {
+}
+
+type ListAssignmentsResponseObject interface {
+	VisitListAssignmentsResponse(w http.ResponseWriter) error
+}
+
+type ListAssignments200JSONResponse []ApiAssignment
+
+func (response ListAssignments200JSONResponse) VisitListAssignmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type CreateFamilyTaskRequestObject struct {
@@ -537,22 +562,6 @@ func (response GetStats200JSONResponse) VisitGetStatsResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListTasksRequestObject struct {
-}
-
-type ListTasksResponseObject interface {
-	VisitListTasksResponse(w http.ResponseWriter) error
-}
-
-type ListTasks200JSONResponse []ApiTask
-
-func (response ListTasks200JSONResponse) VisitListTasksResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type GetFamilyInfoRequestObject struct {
 }
 
@@ -588,6 +597,9 @@ func (response GetUserInfo200JSONResponse) VisitGetUserInfoResponse(w http.Respo
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (GET /api/assignments)
+	ListAssignments(ctx context.Context, request ListAssignmentsRequestObject) (ListAssignmentsResponseObject, error)
+
 	// (POST /api/commands/create-family-task)
 	CreateFamilyTask(ctx context.Context, request CreateFamilyTaskRequestObject) (CreateFamilyTaskResponseObject, error)
 
@@ -602,9 +614,6 @@ type StrictServerInterface interface {
 
 	// (GET /api/stats)
 	GetStats(ctx context.Context, request GetStatsRequestObject) (GetStatsResponseObject, error)
-
-	// (GET /api/tasks)
-	ListTasks(ctx context.Context, request ListTasksRequestObject) (ListTasksResponseObject, error)
 
 	// (GET /api/ui/familyInfo)
 	GetFamilyInfo(ctx context.Context, request GetFamilyInfoRequestObject) (GetFamilyInfoResponseObject, error)
@@ -640,6 +649,30 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListAssignments operation middleware
+func (sh *strictHandler) ListAssignments(w http.ResponseWriter, r *http.Request) {
+	var request ListAssignmentsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAssignments(ctx, request.(ListAssignmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAssignments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAssignmentsResponseObject); ok {
+		if err := validResponse.VisitListAssignmentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CreateFamilyTask operation middleware
@@ -792,30 +825,6 @@ func (sh *strictHandler) GetStats(w http.ResponseWriter, r *http.Request, params
 	}
 }
 
-// ListTasks operation middleware
-func (sh *strictHandler) ListTasks(w http.ResponseWriter, r *http.Request) {
-	var request ListTasksRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListTasks(ctx, request.(ListTasksRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListTasks")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListTasksResponseObject); ok {
-		if err := validResponse.VisitListTasksResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // GetFamilyInfo operation middleware
 func (sh *strictHandler) GetFamilyInfo(w http.ResponseWriter, r *http.Request) {
 	var request GetFamilyInfoRequestObject
@@ -867,23 +876,23 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8xXS2/buBP/KgL//6NSZ3dvvmWT3ULovrCpT0EOjDh22IgiS44KGIG++2JIyXrRiuzW",
-	"RU+JKXIev3n95pXlWhldQomOrV+Zy59Bcf/vjZG3FjjC71zJYv+Ru5dbrRQvxY3d+RvGagMWJfhfyN0L",
-	"/f2/hS1bs/+tOsmrRuzqxshOGqvrlFn4XEkLgq0fgoTHlOHeAFsz/fQJcmR1SqbcQQEnmZIJ/18Q5dDK",
-	"chdVmIljKoOyf3UBJAnKStEbLpQsWcoUqCewvbetjt7bjw0kQ+sEuNxKg1KXERNbyZnwlyWCctFrzQG3",
-	"lu/9b4nB0nmfpWDt3b6qIxi0HgxsZv40PdEtUcEdR2/hVlvFka2Z4AhXKBXZMnmw1fa0B1JEFTvkWLkF",
-	"qUlu3YfLZ+LZx+CguPNkBmTSG8lkoUugz+5WVyX2rJElwg7sWTihRl68JbVylBhv+99qP7xIx0ZPFb6B",
-	"QwhWW3DaQNkIZSl7KnT+AqRFWgsFfOEDeYMi3Bjxo7SvYErn4KwpuVYKBnH5iqI4N/tPa6FpLw8ajTEk",
-	"NlnALyu3etpWwrdE0sdxd/Ft9zfFZTFwHfxJrHl4WXfSmYLv/+IK4mj6WxsrZxrxsA3Pgdh692cYDbEe",
-	"TTVwsryQbWNp4zo8uJL2wYoh0XnWWjQXq8abY9Fq5uA4XnBCqKR1eDREBZ/5aJvhvKho/SQfw9Za1RnR",
-	"U9komEPnvBF/ZFL9MJN/k22omUerlL4kWaxG4fuW59l5cywFIoXSWTCFieTIBqImBOz+2fDygxQuufkn",
-	"Yyn7AtYF2K7f/URm0TTjRrI1++UdHaXMcHz28K24kZTANBjcKvfc+yoYcNVOJ6MdTkMSeHrSVGTDzigy",
-	"nC5QG2djKs8CBuDwVy32YeqU2Ewdbkwhc/949cmFHA7ltKDY5paGug7gO6NLF5Lm5+vrqUN/f/BRQk7j",
-	"8YE5QvVFUrLS8RAo4TeDZUCFLWIWqPGicTmg5laaSwBVeQ6yDKjAV2aBGrOrywE1x+MuCBQhdNXRp1mg",
-	"yKzkvuX7MaB69OrCQMVZ5jcEyrW7yg4wvhwmdEU6lPkUjveAYdmh1me5AvQc62HCL6xWiQiUUtLB5wrs",
-	"nqWs9F2dba1WxDYP4Czhw3U6MVfPKUF9uorHOMyLg7yIGw7Wxik3rNPTw3ogp9GwFtKhT/NpRP+QDtsv",
-	"383zb+R0JVfbwUoSdf49YOLA0ShPtoMtZZLbvQXnK9FYshp4PW97vsmGLlc9dnfU4ULvdiASWSZ0/ajD",
-	"B6Z4UXcPWpY62x28tsU8JGf1Y/1fAAAA//+9ipyi/hQAAA==",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

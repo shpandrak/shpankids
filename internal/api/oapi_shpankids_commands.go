@@ -14,11 +14,11 @@ func (oa *OapiServerApiImpl) UpdateTaskStatus(
 	ctx context.Context,
 	request openapi.UpdateTaskStatusRequestObject,
 ) (openapi.UpdateTaskStatusResponseObject, error) {
-	err := oa.taskManager.UpdateTaskStatus(
+	err := oa.assignmentManager.UpdateTaskStatus(
 		ctx,
 		request.Body.ForDate,
 		request.Body.TaskId,
-		shpankids.TaskStatus(request.Body.Status),
+		shpankids.AssignmentStatus(request.Body.Status),
 		castutil.ValPtrToVal(request.Body.Comment),
 	)
 	if err != nil {

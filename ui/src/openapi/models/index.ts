@@ -1,12 +1,16 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './ApiAssignment';
+export * from './ApiAssignmentStatus';
+export * from './ApiAssignmentType';
 export * from './ApiCreateFamilyTaskCommandArgs';
 export * from './ApiDeleteFamilyTaskCommandArgs';
 export * from './ApiFamilyRole';
 export * from './ApiFamilyTask';
-export * from './ApiTask';
+export * from './ApiProblem';
+export * from './ApiProblemAnswer';
+export * from './ApiProblemAssignment';
 export * from './ApiTaskStats';
-export * from './ApiTaskStatus';
 export * from './ApiUpdateFamilyTaskCommandArgs';
 export * from './ApiUpdateTaskStatusCommandArgs';
 export * from './UIFamilyInfo';

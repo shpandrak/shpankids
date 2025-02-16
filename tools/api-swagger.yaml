@@ -94,12 +94,12 @@ paths:
           description: OK
 
 
-  /api/tasks:
+  /api/assignments:
     get:
       tags:
         - shpankids
-      description: list Tasks
-      operationId: listTasks
+      description: list Assignments
+      operationId: listAssignments
       responses:
         '200':
           description: OK
@@ -108,7 +108,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ApiTask'
+                  $ref: '#/components/schemas/ApiAssignment'
 
   /api/stats:
     get:
@@ -233,32 +233,74 @@ components:
       enum:
         - admin
         - member
-    ApiTask:
+
+    ApiAssignmentType:
+        type: string
+        enum:
+          - task
+          - problem
+    ApiAssignment:
+      required:
+        - id
+        - type
+        - title
+        - forDate
+        - status
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/ApiAssignmentType'
+        title:
+            type: string
+        forDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ApiAssignmentStatus'
+        description:
+          type: string
+
+    ApiProblemAssignment:
       type: object
       description: Task
       required:
+      - problems
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiProblem'
+    ApiProblem:
+        type: object
+        required:
+          - id
+          - title
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          description:
+            type: string
+          answers:
+            type: array
+            items:
+              type: string
+
+    ApiProblemAnswer:
+      type: object
+      required:
         - id
         - title
-        - description
-        - status
-        - forDate
       properties:
         id:
           type: string
         title:
           type: string
-        description:
-          type: string
-        forDate:
-          type: string
-          format: date-time
-        dueDate:
-          type: string
-          format: date-time
-        status:
-          $ref: '#/components/schemas/ApiTaskStatus'
 
-    ApiTaskStatus:
+    ApiAssignmentStatus:
       type: string
       enum:
         - open
@@ -280,7 +322,7 @@ components:
           type: string
           format: date-time
         status:
-          $ref: '#/components/schemas/ApiTaskStatus'
+          $ref: '#/components/schemas/ApiAssignmentStatus'
         comment:
           type: string
 

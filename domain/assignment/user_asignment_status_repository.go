@@ -1,4 +1,4 @@
-package task
+package assignment
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 )
 
 type dbUserTaskStatus struct {
-	Comment    string               `json:"comment"`
-	Status     shpankids.TaskStatus `json:"status"`
-	StatusTime time.Time            `json:"statusTime"`
+	Comment    string                     `json:"comment"`
+	Status     shpankids.AssignmentStatus `json:"status"`
+	StatusTime time.Time                  `json:"statusTime"`
 }
 
 type UserTaskStatusRepository datekvs.DateKvStore[dbUserTaskStatus]

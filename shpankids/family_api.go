@@ -31,7 +31,7 @@ type FamilyTaskDto struct {
 	Title       string
 	Description string
 	MemberIds   []string
-	Status      FamilyTaskStatus
+	Status      FamilyAssignmentStatus
 	Created     time.Time
 	StatusDate  time.Time
 }
@@ -47,26 +47,29 @@ type FamilyProblemDto struct {
 	Title        string
 	Description  string
 	Created      time.Time
-	Status       FamilyTaskStatus
+	Status       FamilyAssignmentStatus
 	StatusDate   time.Time
 	Hints        []string
 	Explanation  string
 	Alternatives []ProblemAlternativeDto
 }
 
-type FamilyTaskStatus string
+type FamilyAssignmentStatus string
 
 const (
-	FamilyTaskStatusActive  FamilyTaskStatus = "active"
-	FamilyTaskStatusDeleted FamilyTaskStatus = "deleted"
+	FamilyAssignmentStatusActive  FamilyAssignmentStatus = "active"
+	FamilyAssignmentStatusDeleted FamilyAssignmentStatus = "deleted"
 )
 
 type FamilyManager interface {
 	CreateFamily(ctx context.Context, familyId string, familyName string, memberUserIds []string, adminUserIds []string) error
-	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
-	CreateFamilyProblem(ctx context.Context, familyId string, forUserId string, familyProblem FamilyProblemDto) error
+	GetFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
+
+	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
 	ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[FamilyTaskDto]
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
-	GetFamily(ctx context.Context, familyId string) (*FamilyDto, error)
+
+	CreateFamilyProblem(ctx context.Context, familyId string, forUserId string, familyProblem FamilyProblemDto) error
+	ListFamilyProblemsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemDto]
 }

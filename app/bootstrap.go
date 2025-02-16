@@ -136,8 +136,13 @@ func appBootstrap(
 			}
 
 			// Create a session for the user
+			ourLocation, err := time.LoadLocation("Asia/Jerusalem")
+			if err != nil {
+				return err
+			}
 			err = sessionManager.Set(bootstrapCtx, currDefaultUser.Email, shpankids.Session{
 				FamilyId: shpanFamilyId,
+				Location: ourLocation,
 			})
 
 		}
