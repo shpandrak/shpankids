@@ -131,6 +131,58 @@ paths:
                 items:
                   $ref: '#/components/schemas/ApiAssignment'
 
+  /api/family-problem-sets:
+    get:
+      tags:
+        - shpankids
+      description: list Problem Sets assign by family
+      operationId: listUserFamilyProblemSets
+      parameters:
+        - name: userId
+          in: query
+          description: User ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiProblemSet'
+
+  /api/family-problem-sets/{problemSetId}/problems-for-edit:
+    get:
+      tags:
+        - shpankids
+      description: list Problem Set Problems for editing
+      operationId: listProblemSetProblems
+      parameters:
+        - name: problemSetId
+          in: path
+          description: Problem Set ID
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: query
+          description: User ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiProblemForEdit'
+
   /api/stats:
     get:
       tags:
@@ -283,6 +335,19 @@ components:
         description:
           type: string
 
+    ApiProblemSet:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+
     ApiProblem:
       type: object
       required:
@@ -300,7 +365,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApiProblemAnswer'
-
     ApiProblemAnswer:
       type: object
       required:
@@ -310,6 +374,41 @@ components:
         id:
           type: string
         title:
+          type: string
+        description:
+          type: string
+
+    ApiProblemForEdit:
+      type: object
+      required:
+        - title
+        - answers
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiProblemAnswerForEdit'
+
+
+    ApiProblemAnswerForEdit:
+      type: object
+      required:
+        - title
+        - isCorrect
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        isCorrect:
+          type: boolean
+        description:
           type: string
 
     ApiAssignmentStatus:
@@ -394,20 +493,20 @@ components:
           type: integer
 
     ApiLoadProblemForAssignmentCommandArgs:
-        type: object
-        required:
-            - assignmentId
-            - forDate
-        properties:
-          assignmentId:
-            type: string
-          forDate:
-            type: string
-            format: date-time
+      type: object
+      required:
+        - assignmentId
+        - forDate
+      properties:
+        assignmentId:
+          type: string
+        forDate:
+          type: string
+          format: date-time
     ApiLoadProblemForAssignmentCommandResult:
-        type: object
-        required:
-            - problem
-        properties:
-          problem:
-            $ref: '#/components/schemas/ApiProblem'
+      type: object
+      required:
+        - problem
+      properties:
+        problem:
+          $ref: '#/components/schemas/ApiProblem'

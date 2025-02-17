@@ -78,6 +78,7 @@ type dbFamilyProblem struct {
 }
 
 type dbProblemAlternative struct {
+	Id          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Correct     bool   `json:"correct"`

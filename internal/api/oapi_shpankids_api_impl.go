@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/castutil"
@@ -20,6 +19,75 @@ type OapiServerApiImpl struct {
 	assignmentManager  shpankids.AssignmentManager
 	familyManager      shpankids.FamilyManager
 	sessionManager     shpankids.SessionManager
+}
+
+func (oa *OapiServerApiImpl) ListProblemSetProblems(
+	ctx context.Context,
+	request openapi.ListProblemSetProblemsRequestObject,
+) (openapi.ListProblemSetProblemsResponseObject, error) {
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &streamingProblemsForEdit{
+		ctx: ctx,
+		stream: shpanstream.MapStream(
+			oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, request.Params.UserId, request.ProblemSetId),
+			toApiProblemForEdit,
+		),
+	}, nil
+}
+
+func toApiProblemForEdit(p *shpankids.FamilyProblemDto) *openapi.ApiProblemForEdit {
+	return &openapi.ApiProblemForEdit{
+		Description: castutil.StrToStrPtr(p.Description),
+		Id:          functional.ValueToPointer(p.ProblemId),
+		Title:       p.Title,
+		Answers:     functional.MapSliceNoErr(p.Alternatives, toApiProblemAnswerForEdit),
+	}
+
+}
+func toApiProblemAnswerForEdit(a shpankids.ProblemAlternativeDto) openapi.ApiProblemAnswerForEdit {
+	return openapi.ApiProblemAnswerForEdit{
+		Description: castutil.StrToStrPtr(a.Description),
+		Id:          functional.ValueToPointer(a.Id),
+		IsCorrect:   a.Correct,
+		Title:       a.Title,
+	}
+}
+
+func (oa *OapiServerApiImpl) ListUserFamilyProblemSets(
+	ctx context.Context,
+	request openapi.ListUserFamilyProblemSetsRequestObject,
+) (openapi.ListUserFamilyProblemSetsResponseObject, error) {
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &streamingProblemSets{
+		stream: shpanstream.MapStream(
+			oa.familyManager.ListFamilyProblemSetsForUser(ctx, s.FamilyId, request.Params.UserId),
+			toApiProblemSet,
+		),
+		ctx: ctx,
+	}, nil
+}
+func toApiProblemSet(p *shpankids.FamilyProblemSetDto) *openapi.ApiProblemSet {
+	return &openapi.ApiProblemSet{
+		Id:          p.ProblemSetId,
+		Title:       p.Title,
+		Description: castutil.StrToStrPtr(p.Description),
+	}
 }
 
 func (oa *OapiServerApiImpl) LoadProblemForAssignment(
@@ -112,24 +180,6 @@ func (oa *OapiServerApiImpl) GetStats(
 			}),
 		ctx: ctx,
 	}, nil
-}
-
-type streamingGetStatsResponseObject struct {
-	stream shpanstream.Stream[openapi.ApiTaskStats]
-	ctx    context.Context
-}
-
-func (s *streamingGetStatsResponseObject) VisitGetStatsResponse(w http.ResponseWriter) error {
-	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
-}
-
-type streamingAssignments struct {
-	stream shpanstream.Stream[openapi.ApiAssignment]
-	ctx    context.Context
-}
-
-func (s *streamingAssignments) VisitListAssignmentsResponse(w http.ResponseWriter) error {
-	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
 }
 
 func NewOapiServerApiImpl(

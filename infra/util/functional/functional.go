@@ -398,6 +398,22 @@ func SliceToMapNoErrCheckDuplicates[K comparable, V any](slc []V, keyExtractor M
 	return ret, nil
 }
 
+func CheckDuplicateSlice[K comparable, V any](slc []V, keyExtractor MapFuncNoErr[V, K]) error {
+	if slc == nil {
+		return nil
+	}
+	ret := make(map[K]bool, len(slc))
+	for _, currValue := range slc {
+		key := keyExtractor(currValue)
+		if _, ok := ret[key]; ok {
+			return fmt.Errorf("duplicate key %v", key)
+		} else {
+			ret[key] = true
+		}
+	}
+	return nil
+}
+
 func SliceToMapCheckDuplicates[K comparable, V any](slc []V, keyExtractor MapFunc[V, K]) (map[K]V, error) {
 	if slc == nil {
 		return map[K]V{}, nil

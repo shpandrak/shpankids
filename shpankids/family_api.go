@@ -37,6 +37,7 @@ type FamilyTaskDto struct {
 }
 
 type ProblemAlternativeDto struct {
+	Id          string
 	Title       string
 	Description string
 	Correct     bool
