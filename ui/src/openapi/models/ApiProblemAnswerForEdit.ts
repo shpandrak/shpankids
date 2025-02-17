@@ -16,55 +16,62 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface ApiProblemAnswer
+ * @interface ApiProblemAnswerForEdit
  */
-export interface ApiProblemAnswer {
+export interface ApiProblemAnswerForEdit {
     /**
      * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemAnswerForEdit
      */
-    id: string;
+    id?: string;
     /**
      * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemAnswerForEdit
      */
     title: string;
     /**
      * 
+     * @type {boolean}
+     * @memberof ApiProblemAnswerForEdit
+     */
+    isCorrect: boolean;
+    /**
+     * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemAnswerForEdit
      */
     description?: string;
 }
 
 /**
- * Check if a given object implements the ApiProblemAnswer interface.
+ * Check if a given object implements the ApiProblemAnswerForEdit interface.
  */
-export function instanceOfApiProblemAnswer(value: object): boolean {
-    if (!('id' in value)) return false;
+export function instanceOfApiProblemAnswerForEdit(value: object): boolean {
     if (!('title' in value)) return false;
+    if (!('isCorrect' in value)) return false;
     return true;
 }
 
-export function ApiProblemAnswerFromJSON(json: any): ApiProblemAnswer {
-    return ApiProblemAnswerFromJSONTyped(json, false);
+export function ApiProblemAnswerForEditFromJSON(json: any): ApiProblemAnswerForEdit {
+    return ApiProblemAnswerForEditFromJSONTyped(json, false);
 }
 
-export function ApiProblemAnswerFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiProblemAnswer {
+export function ApiProblemAnswerForEditFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiProblemAnswerForEdit {
     if (json == null) {
         return json;
     }
     return {
         
-        'id': json['id'],
+        'id': json['id'] == null ? undefined : json['id'],
         'title': json['title'],
+        'isCorrect': json['isCorrect'],
         'description': json['description'] == null ? undefined : json['description'],
     };
 }
 
-export function ApiProblemAnswerToJSON(value?: ApiProblemAnswer | null): any {
+export function ApiProblemAnswerForEditToJSON(value?: ApiProblemAnswerForEdit | null): any {
     if (value == null) {
         return value;
     }
@@ -72,6 +79,7 @@ export function ApiProblemAnswerToJSON(value?: ApiProblemAnswer | null): any {
         
         'id': value['id'],
         'title': value['title'],
+        'isCorrect': value['isCorrect'],
         'description': value['description'],
     };
 }

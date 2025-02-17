@@ -12,8 +12,13 @@ type OAuthSecret struct {
 	ClientSecret string `json:"clientSecret"`
 }
 
+type GeminiSecret struct {
+	ApiKey string `json:"apiKey"`
+}
+
 type Secrets struct {
-	OAuth OAuthSecret `json:"oAuth"`
+	OAuth  OAuthSecret  `json:"oAuth"`
+	Gemini GeminiSecret `json:"gemini"`
 }
 
 var secrets Secrets

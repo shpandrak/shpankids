@@ -29,6 +29,11 @@ func main() {
 		log.Fatalf("Failed to detect secrets: %v", err)
 	}
 
+	//err = ai.DoAiThing(context.Background(), shpankids.GetSecrets().Gemini.ApiKey)
+	//if err != nil {
+	//	panic(err)
+	//}
+
 	var kvs kvstore.RawJsonStore
 	fs, err := firestore.NewClient(context.Background(), projectID)
 	if err != nil {

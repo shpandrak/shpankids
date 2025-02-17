@@ -185,6 +185,22 @@ func (m *Manager) CreateFamilyProblem(
 		return util.BadInputError(fmt.Errorf("user %s is not part of the family %s", forUserId, f.Name))
 	}
 
+	err = functional.CheckDuplicateSlice(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) string {
+		return a.Id
+	})
+	if err != nil {
+		return util.BadInputError(fmt.Errorf("duplicate alternative id found in problem"))
+	}
+
+	for _, a := range familyProblem.Alternatives {
+		if a.Id == "" {
+			return util.BadInputError(fmt.Errorf("alternative id is required"))
+		}
+		if a.Title == "" {
+			return util.BadInputError(fmt.Errorf("alternative title is required"))
+		}
+	}
+
 	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, forUserId, problemSetId)
 	if err != nil {
 		return err
@@ -199,6 +215,7 @@ func (m *Manager) CreateFamilyProblem(
 		Explanation: familyProblem.Explanation,
 		Alternatives: functional.MapSliceNoErr(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) dbProblemAlternative {
 			return dbProblemAlternative{
+				Id:          a.Id,
 				Title:       a.Title,
 				Description: a.Description,
 				Correct:     a.Correct,
@@ -360,6 +377,7 @@ func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbFamilyProblemSet])
 
 func mapFamilyProblemAlternativeDbToDto(a dbProblemAlternative) shpankids.ProblemAlternativeDto {
 	return shpankids.ProblemAlternativeDto{
+		Id:          a.Id,
 		Title:       a.Title,
 		Description: a.Description,
 		Correct:     a.Correct,

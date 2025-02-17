@@ -16,43 +16,43 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface ApiProblemAnswer
+ * @interface ApiProblemSet
  */
-export interface ApiProblemAnswer {
+export interface ApiProblemSet {
     /**
      * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemSet
      */
     id: string;
     /**
      * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemSet
      */
     title: string;
     /**
      * 
      * @type {string}
-     * @memberof ApiProblemAnswer
+     * @memberof ApiProblemSet
      */
     description?: string;
 }
 
 /**
- * Check if a given object implements the ApiProblemAnswer interface.
+ * Check if a given object implements the ApiProblemSet interface.
  */
-export function instanceOfApiProblemAnswer(value: object): boolean {
+export function instanceOfApiProblemSet(value: object): boolean {
     if (!('id' in value)) return false;
     if (!('title' in value)) return false;
     return true;
 }
 
-export function ApiProblemAnswerFromJSON(json: any): ApiProblemAnswer {
-    return ApiProblemAnswerFromJSONTyped(json, false);
+export function ApiProblemSetFromJSON(json: any): ApiProblemSet {
+    return ApiProblemSetFromJSONTyped(json, false);
 }
 
-export function ApiProblemAnswerFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiProblemAnswer {
+export function ApiProblemSetFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApiProblemSet {
     if (json == null) {
         return json;
     }
@@ -64,7 +64,7 @@ export function ApiProblemAnswerFromJSONTyped(json: any, ignoreDiscriminator: bo
     };
 }
 
-export function ApiProblemAnswerToJSON(value?: ApiProblemAnswer | null): any {
+export function ApiProblemSetToJSON(value?: ApiProblemSet | null): any {
     if (value == null) {
         return value;
     }
