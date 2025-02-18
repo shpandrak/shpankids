@@ -79,6 +79,17 @@ type ApiFamilyTask struct {
 	Title       string   `json:"title"`
 }
 
+// ApiGenerateProblemsCommandArgs defines model for ApiGenerateProblemsCommandArgs.
+type ApiGenerateProblemsCommandArgs struct {
+	ProblemSetId string `json:"problemSetId"`
+	UserId       string `json:"userId"`
+}
+
+// ApiGenerateProblemsCommandResp defines model for ApiGenerateProblemsCommandResp.
+type ApiGenerateProblemsCommandResp struct {
+	Problem ApiProblemForEdit `json:"problem"`
+}
+
 // ApiLoadProblemForAssignmentCommandArgs defines model for ApiLoadProblemForAssignmentCommandArgs.
 type ApiLoadProblemForAssignmentCommandArgs struct {
 	AssignmentId string    `json:"assignmentId"`
@@ -210,6 +221,9 @@ type CreateFamilyTaskJSONRequestBody = ApiCreateFamilyTaskCommandArgs
 // DeleteFamilyTaskJSONRequestBody defines body for DeleteFamilyTask for application/json ContentType.
 type DeleteFamilyTaskJSONRequestBody = ApiDeleteFamilyTaskCommandArgs
 
+// GenerateProblemsJSONRequestBody defines body for GenerateProblems for application/json ContentType.
+type GenerateProblemsJSONRequestBody = ApiGenerateProblemsCommandArgs
+
 // LoadProblemForAssignmentJSONRequestBody defines body for LoadProblemForAssignment for application/json ContentType.
 type LoadProblemForAssignmentJSONRequestBody = ApiLoadProblemForAssignmentCommandArgs
 
@@ -230,6 +244,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/generate-problems)
+	GenerateProblems(w http.ResponseWriter, r *http.Request)
 
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(w http.ResponseWriter, r *http.Request)
@@ -301,6 +318,21 @@ func (siw *ServerInterfaceWrapper) DeleteFamilyTask(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteFamilyTask(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GenerateProblems operation middleware
+func (siw *ServerInterfaceWrapper) GenerateProblems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GenerateProblems(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -619,6 +651,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/delete-family-task", wrapper.DeleteFamilyTask).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/commands/generate-problems", wrapper.GenerateProblems).Methods("POST")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/load-problem-for-assignment", wrapper.LoadProblemForAssignment).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-family-task", wrapper.UpdateFamilyTask).Methods("POST")
@@ -684,6 +718,23 @@ type DeleteFamilyTask200Response struct {
 func (response DeleteFamilyTask200Response) VisitDeleteFamilyTaskResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
+}
+
+type GenerateProblemsRequestObject struct {
+	Body *GenerateProblemsJSONRequestBody
+}
+
+type GenerateProblemsResponseObject interface {
+	VisitGenerateProblemsResponse(w http.ResponseWriter) error
+}
+
+type GenerateProblems200JSONResponse ApiGenerateProblemsCommandResp
+
+func (response GenerateProblems200JSONResponse) VisitGenerateProblemsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type LoadProblemForAssignmentRequestObject struct {
@@ -831,6 +882,9 @@ type StrictServerInterface interface {
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(ctx context.Context, request DeleteFamilyTaskRequestObject) (DeleteFamilyTaskResponseObject, error)
 
+	// (POST /api/commands/generate-problems)
+	GenerateProblems(ctx context.Context, request GenerateProblemsRequestObject) (GenerateProblemsResponseObject, error)
+
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(ctx context.Context, request LoadProblemForAssignmentRequestObject) (LoadProblemForAssignmentResponseObject, error)
 
@@ -964,6 +1018,37 @@ func (sh *strictHandler) DeleteFamilyTask(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteFamilyTaskResponseObject); ok {
 		if err := validResponse.VisitDeleteFamilyTaskResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateProblems operation middleware
+func (sh *strictHandler) GenerateProblems(w http.ResponseWriter, r *http.Request) {
+	var request GenerateProblemsRequestObject
+
+	var body GenerateProblemsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateProblems(ctx, request.(GenerateProblemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateProblems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GenerateProblemsResponseObject); ok {
+		if err := validResponse.VisitGenerateProblemsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1194,29 +1279,30 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/9xZT3PbthP9Khz8fkcqStubbqodZzRJW09snTw+QOJKRkwCDACm1Xj03TsLgAL/gBQp",
-	"Sx5PbzZBLnbfPizerl7IWmS54MC1IrMXotZPkFHz5zxnc6XYlmfANT7IpchBagZmOQG1lizXTHD8V+9y",
-	"IDOitGR8S/Yx2Qh5TTXg2kbIjGoyIwnVMNEsAxK3P2BJ0I7SVBdmx/9L2JAZ+d/Uuzx1/k5rzt7ZT/Yx",
-	"0UynEDRrH4wweo8f7PcxkfCjYBISMntAn52pci8f+MH1x0OwYvUd1hq3D/k7eyHAiwztihw4iUkiONpZ",
-	"pWL9DLgVkxJS+Em5rlj1QbUdrtjUVD2TGLO4SiG7g04TVxKohhuasXR3T9XzlcgyypO53Ko2DYzV4zh6",
-	"ay0MjYUOjK4hhVGuLEIkCmy4SLq2tJt9E2kNPJpkDDOSQbYC2YVcJcrR58VaXiTmZaYhUz28JVRKuutj",
-	"eJCojqF+qw4Mvgqa3Fqe3AjpKdULPz28tkjOUREaEdTMe2OnRfANVJEGipo7HAMI7Yy33CwtdPh16zdo",
-	"oMfV3yDryR/mwtx8GeLGMcp1VNxTKFW63x+2c3X02Tibo0PcuxHyU8L02bxk6kpIiZv51ZUQKVA+IogS",
-	"aG+tP5bOKF5LtNLwm/NtHNXwfnt3PMObAS/7QPXEqx6X1ZUoeJUqjGvY2vM9WlJpoWl6zGqh8C44Hp7X",
-	"Ne6LuOl0e8MOHJZ58l4UhnWlTEyhel1Zi6wUw6/Xu68TtuO0zkBVulxYFBd8I1rnhdi1iOFi3KwqqI8+",
-	"ZZSlNQDAPAkEvzG2rpnKU7r7k2ZhkW7fWkrWo5iGV7Iyuj+shguJKWTuaHuWc01rzdNzCCWughVCwkdW",
-	"etSXKxdNV7acYG3mC0akikmlO1OU0p5F6VT0oKNrJHcTttIr70RlS7dBHzqnafGOe+DdSPTlYoklOHhK",
-	"cSVahM4ovO3xPJk3XRQIHBTvQRsmtMMcRC4F5O4pp/wLS1Q0v12QmPwEqSxsHz/8gm5h401zRmbktw/4",
-	"KCY51U8GvinN2dR3IebZ1qqMegZSpnQ0r7xozEqKy1izyVemdH1dgsoFVzZPv378aC8brt1lQ/M8ZWtj",
-	"YPpdWdLa8zNGxlWmOe1q1ZRv5K8vJhOa4kX4QBQi98yQkPjYgLG2d6Wars3EYGKzMSkv7FyoADp2uhC5",
-	"8nRvhxJ1fJoDCGIJAUr/LpLdKGyOQNI36tjvLRPbmTkdqMTMM4YBZWcfvUA1xyOXA6pvEHMJoFJBk4nr",
-	"pScbISe0PooMIoZNv4o4/KMj92m0ETKqfNo6iR1jgssBOWS00g3oG3nhxiOvrAqFkdbDyG5leC/Zm03D",
-	"5XLU155cguwOKERo4ruCXqDQrci1A2GgfEtzaaDCzdMZgXIMKsuBgmOXr6N2dAdaueMfrXaRtRO8jlE1",
-	"2YT7+YEyt7+kGWjTZjyEpdY1QZ1BZuRHARKtcyNrfJfsxYyWBcQVeJvC5/GNlEBlRnIeJRDI0PTF/9Kw",
-	"SPZT958y1RzcaGpQCsu/lanm+CmiFcqij6v85FgKq9v4TKLm84msxjEqnfF/jTCds7+TSKPKSViQBabC",
-	"4StMabZuV7nPoO0o7UiGb6TIosSOPkKob6TISBXjYb9NtNwVfZtoMX6Lt8qtH0qeJ61FWQ7K/jSY3s+g",
-	"IwUKuy9Xl8vBUivNlZnUBVVRbfZ1PPLloh5yUWnIOwNOxXYLScR4hK93Bnxo7i8a7mGXocH6By8lr+v9",
-	"9P5x/28AAAD//6qKPA5QIAAA",
+	"H4sIAAAAAAAC/9xZS2/jNhD+KwLbo7xO25tvbrJZGJu2QRKfghxoa+xwI5FaktrWCPzfCz5k6kHKkmMF",
+	"wd4SUZrHNw/OfH5Fa5bljAKVAs1ekVg/Q4b1n/OczIUgW5oBlepBzlkOXBLQxwmINSe5JIyqf+UuBzRD",
+	"QnJCt2gfow3jV1iCOtswnmGJZijBEiaSZIDi9gck8coREstCa/yVwwbN0C9TZ/LU2jutGXtvPtnHSBKZ",
+	"gleseTBA6IP6YL+PEYfvBeGQoNmjstmKKnU5xw+mPx2cZatvsJZKvc/e2SsCWmRKLsuBohgljCo5q5St",
+	"X0CpIpxDCj8wlRWpzqm2wRWZEosXFKsorlLI7iEo4pIDlnCNM5LuHrB4uWRZhmky51vRTgMt9TiOTloL",
+	"Qy0hgNEVpDDIlIUviTwKF0lIpVF2x9IaeDjJiIpIBtkKeAi5ipeD68VIXiT6ZSIhEx15izDneNeV4d5E",
+	"tRnqVAUw+AIUOJZwa3JFdMLuEmrhr+BCKGXHbawJOnw2zMQ7EHnQxB55asVdM/45ITJkYsioG4YTJ8GV",
+	"Yid++PBaAL+BnbRhck28E3aaB3cgilSeAeChyN46BQ30qPgXeL1o+pkw11/6aupYqQZuqlNKsTS/221r",
+	"6uCecjZD+5hX1sy5rCTiknGulLnTFWMpYDrAiRJoJ63bl6AXb020Q0t573wblmpqLvhweaZuVDUkebqn",
+	"GpHUsbhkBa2mCqEStqa+B4+ikkmcHpPa91pz86D9Im4a3VYYwGGZJx9lMjOmlIEpukeENcvKJeLte8Lb",
+	"FoJhM2LPaX65MCgu6Ia16gWZs4iow7jZVdRc+TnDJK0BAPqJx/mNlnVFRJ7i3d848y835q0lJx2TZv9O",
+	"Vnr3l5l9fUOoytzB8kzONaU1q+fgSlwFy4eE86y0qCtW1ptQtOyg34wXDAgV4UIGQ5TijkNut49epatX",
+	"lSZspVXOiIpKq6ALndN2mMA98GFWm+ViqVqwt0rVSbTw1Si8b3menDehFPAUirOgDZOSQyxENgTo/jnH",
+	"9CtJRDS/XaAY/QAuDGwXn35TZrEcKM4JmqE/PqlHMcqxfNbwTXFOpm4L0c+2ZsqoRyAlQkbzyotaLMfq",
+	"WPVsdEOErJ9zEDmjwsTp94sLc9lQaS8bnOcpWWsB02/CJK2pnyFjXIUFa3er5viG/vmqIyGxuggfkVDI",
+	"vRCVkOqxBmNt7koxXWumZWKiMSkv7JwJDzqGlYlse3owZE4dnyZxg0xCgJB/smQ3CJsjkHRRRPu9ycR2",
+	"ZE4HKtE8UD+gDGfUCVSTVhoPqC4CawygtpYWmdh9WoRxKhmUqHw12jBe/hMJkC3YmpzLeLB1EVBh2EbW",
+	"rrmlN1Z8ynBSxmayYXyC6xS7N1I3DCciovCfPIRHharyaatTBmic8SLWh/oaP3L96Ks3xrDQq0+/ZmTW",
+	"pM5m1FzqxotR1/o4RjOyQCmEJm5r6wRKmRXZdc0PlFs5xwbKv9yeESibQWU7EHBsOLKpHd2DFLb8o9Uu",
+	"MnK845Kaak3AHb8j9HTGcQZSr4GP/lH4Cqk5EM3Q9wK4kk712OlYDDdsSl5AXIG3OZg+vdOkVuGwzjOp",
+	"eSI0fa3+TrGflren7uZgqcNeISz/Nhev+lSh5Yui86ty9XaGsKrGRVLN5C6Qjd9b+ocz/tkSJsjNnpQ0",
+	"omQqvVmgO5x6hQhJ1sIzZElDdR6J8DVnWZQYasqH+oazDFUx7vfbUctc1qVEsuEq3iu2jjQ+T1iLsh2U",
+	"/IE3vF9ARgKE2o5tXy6Jv1aYK5zhiFNRjZs87vlyUXe5qBAmQYdTtt1CEhEaqdeDDh/Il1HdPWjp66x7",
+	"8FrmdZ3v2D/t/w8AAP//r3BXcSgjAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

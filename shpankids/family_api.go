@@ -3,6 +3,7 @@ package shpankids
 import (
 	"context"
 	"shpankids/infra/shpanstream"
+	"shpankids/openapi"
 	"time"
 )
 
@@ -82,4 +83,6 @@ type FamilyManager interface {
 	CreateFamilyProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet FamilyProblemSetDto) error
 	ListFamilyProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
 	ListFamilyProblemsForUser(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]
+
+	GenerateNewProblems(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[openapi.ApiProblemForEdit]
 }

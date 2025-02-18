@@ -7,7 +7,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-func DoAiThing(ctx context.Context, apiKey string) error {
+func GetClient(ctx context.Context, apiKey string) error {
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {

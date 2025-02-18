@@ -21,6 +21,23 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) GenerateProblems(ctx context.Context, request openapi.GenerateProblemsRequestObject) (openapi.GenerateProblemsResponseObject, error) {
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &streamingProblemsForEdit{
+		ctx:    ctx,
+		stream: oa.familyManager.GenerateNewProblems(ctx, s.FamilyId, request.Body.UserId, request.Body.ProblemSetId),
+	}, nil
+
+}
+
 func (oa *OapiServerApiImpl) ListProblemSetProblems(
 	ctx context.Context,
 	request openapi.ListProblemSetProblemsRequestObject,
@@ -38,12 +55,12 @@ func (oa *OapiServerApiImpl) ListProblemSetProblems(
 		ctx: ctx,
 		stream: shpanstream.MapStream(
 			oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, request.Params.UserId, request.ProblemSetId),
-			toApiProblemForEdit,
+			ToApiProblemForEdit,
 		),
 	}, nil
 }
 
-func toApiProblemForEdit(p *shpankids.FamilyProblemDto) *openapi.ApiProblemForEdit {
+func ToApiProblemForEdit(p *shpankids.FamilyProblemDto) *openapi.ApiProblemForEdit {
 	return &openapi.ApiProblemForEdit{
 		Description: castutil.StrToStrPtr(p.Description),
 		Id:          functional.ValueToPointer(p.ProblemId),

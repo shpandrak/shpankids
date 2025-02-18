@@ -42,3 +42,6 @@ type streamingProblemsForEdit struct {
 func (s *streamingProblemsForEdit) VisitListProblemSetProblemsResponse(w http.ResponseWriter) error {
 	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
 }
+func (s *streamingProblemsForEdit) VisitGenerateProblemsResponse(w http.ResponseWriter) error {
+	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
+}

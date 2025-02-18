@@ -7,6 +7,8 @@ export * from './ApiCreateFamilyTaskCommandArgs';
 export * from './ApiDeleteFamilyTaskCommandArgs';
 export * from './ApiFamilyRole';
 export * from './ApiFamilyTask';
+export * from './ApiGenerateProblemsCommandArgs';
+export * from './ApiGenerateProblemsCommandResp';
 export * from './ApiLoadProblemForAssignmentCommandArgs';
 export * from './ApiLoadProblemForAssignmentCommandResult';
 export * from './ApiProblem';
