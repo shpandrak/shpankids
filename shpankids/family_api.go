@@ -84,5 +84,11 @@ type FamilyManager interface {
 	ListFamilyProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
 	ListFamilyProblemsForUser(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]
 
-	GenerateNewProblems(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[openapi.ApiProblemForEdit]
+	GenerateNewProblems(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		additionalRequestText string,
+	) shpanstream.Stream[openapi.ApiProblemForEdit]
 }
