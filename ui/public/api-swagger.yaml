@@ -68,6 +68,26 @@ paths:
                 $ref: '#/components/schemas/ApiLoadProblemForAssignmentCommandResult'
 
 
+  /api/commands/generate-problems:
+    post:
+      tags:
+        - shpankids
+      description: Generate problems for problem set
+      operationId: generateProblems
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiGenerateProblemsCommandArgs'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiGenerateProblemsCommandResp'
+
+
 
   /api/commands/create-family-task:
     post:
@@ -510,3 +530,22 @@ components:
       properties:
         problem:
           $ref: '#/components/schemas/ApiProblem'
+
+
+    ApiGenerateProblemsCommandArgs:
+      type: object
+      required:
+        - problemSetId
+        - userId
+      properties:
+        problemSetId:
+          type: string
+        userId:
+          type: string
+    ApiGenerateProblemsCommandResp:
+      type: object
+      required:
+        - problem
+      properties:
+        problem:
+          $ref: '#/components/schemas/ApiProblemForEdit'

@@ -18,6 +18,8 @@ import type {
   ApiAssignment,
   ApiCreateFamilyTaskCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
+  ApiGenerateProblemsCommandArgs,
+  ApiGenerateProblemsCommandResp,
   ApiLoadProblemForAssignmentCommandArgs,
   ApiLoadProblemForAssignmentCommandResult,
   ApiProblemForEdit,
@@ -33,6 +35,10 @@ import {
     ApiCreateFamilyTaskCommandArgsToJSON,
     ApiDeleteFamilyTaskCommandArgsFromJSON,
     ApiDeleteFamilyTaskCommandArgsToJSON,
+    ApiGenerateProblemsCommandArgsFromJSON,
+    ApiGenerateProblemsCommandArgsToJSON,
+    ApiGenerateProblemsCommandRespFromJSON,
+    ApiGenerateProblemsCommandRespToJSON,
     ApiLoadProblemForAssignmentCommandArgsFromJSON,
     ApiLoadProblemForAssignmentCommandArgsToJSON,
     ApiLoadProblemForAssignmentCommandResultFromJSON,
@@ -55,6 +61,10 @@ export interface CreateFamilyTaskRequest {
 
 export interface DeleteFamilyTaskRequest {
     apiDeleteFamilyTaskCommandArgs?: ApiDeleteFamilyTaskCommandArgs;
+}
+
+export interface GenerateProblemsRequest {
+    apiGenerateProblemsCommandArgs?: ApiGenerateProblemsCommandArgs;
 }
 
 export interface GetStatsRequest {
@@ -142,6 +152,35 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async deleteFamilyTask(requestParameters: DeleteFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.deleteFamilyTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Generate problems for problem set
+     */
+    async generateProblemsRaw(requestParameters: GenerateProblemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ApiGenerateProblemsCommandResp>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/generate-problems`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiGenerateProblemsCommandArgsToJSON(requestParameters['apiGenerateProblemsCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ApiGenerateProblemsCommandRespFromJSON(jsonValue));
+    }
+
+    /**
+     * Generate problems for problem set
+     */
+    async generateProblems(requestParameters: GenerateProblemsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiGenerateProblemsCommandResp> {
+        const response = await this.generateProblemsRaw(requestParameters, initOverrides);
+        return await response.value();
     }
 
     /**

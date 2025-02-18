@@ -7,6 +7,7 @@ import (
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 	"shpankids/internal/infra/util"
+	"shpankids/openapi"
 	"shpankids/shpankids"
 	"slices"
 	"time"
@@ -375,6 +376,27 @@ func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbFamilyProblemSet])
 	}
 }
 
+func (m *Manager) GenerateNewProblems(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+) shpanstream.Stream[openapi.ApiProblemForEdit] {
+	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, userId)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
+	}
+	dbProblemSet, err := psRepo.Get(ctx, problemSetId)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
+	}
+	return generateProblems(
+		ctx,
+		userId,
+		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbFamilyProblemSet]{Key: problemSetId, Value: dbProblemSet}),
+		m.ListFamilyProblemsForUser(ctx, familyId, userId, problemSetId),
+	)
+}
 func mapFamilyProblemAlternativeDbToDto(a dbProblemAlternative) shpankids.ProblemAlternativeDto {
 	return shpankids.ProblemAlternativeDto{
 		Id:          a.Id,
