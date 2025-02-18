@@ -381,6 +381,7 @@ func (m *Manager) GenerateNewProblems(
 	familyId string,
 	userId string,
 	problemSetId string,
+	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
 	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, userId)
 	if err != nil {
@@ -395,6 +396,7 @@ func (m *Manager) GenerateNewProblems(
 		userId,
 		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbFamilyProblemSet]{Key: problemSetId, Value: dbProblemSet}),
 		m.ListFamilyProblemsForUser(ctx, familyId, userId, problemSetId),
+		additionalRequestText,
 	)
 }
 func mapFamilyProblemAlternativeDbToDto(a dbProblemAlternative) shpankids.ProblemAlternativeDto {

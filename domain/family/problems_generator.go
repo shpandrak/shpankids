@@ -18,6 +18,7 @@ func generateProblems(
 	forUserId string,
 	problemSet shpankids.FamilyProblemSetDto,
 	examples shpanstream.Stream[shpankids.FamilyProblemDto],
+	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
 	client, err := genai.NewClient(ctx, option.WithAPIKey(shpankids.GetSecrets().Gemini.ApiKey))
 	if err != nil {
@@ -25,11 +26,11 @@ func generateProblems(
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-1.5-pro")
-	model.SetTemperature(1)
-	model.SetTopK(40)
-	model.SetTopP(0.95)
-	model.SetMaxOutputTokens(8192)
+	model := client.GenerativeModel("gemini-2.0-flash")
+	//model.SetTemperature(1)
+	//model.SetTopK(40)
+	//model.SetTopP(0.95)
+	//model.SetMaxOutputTokens(8192)
 	model.ResponseMIMEType = "application/json"
 	model.ResponseSchema = &genai.Schema{
 		Type:        genai.TypeArray,
@@ -84,7 +85,7 @@ func generateProblems(
 	}
 
 	strs, err := shpanstream.MapStreamWithError(
-		examples.Limit(3),
+		examples.Limit(5),
 		func(ctx context.Context, dto *shpankids.FamilyProblemDto) (*string, error) {
 			marshal, err := json.Marshal(dto)
 			if err != nil {
@@ -99,12 +100,21 @@ func generateProblems(
 
 	sampleFullJson := fmt.Sprintf("[%s]", strings.Join(strs, ","))
 
+	if additionalRequestText != "" {
+		additionalRequestText = fmt.Sprintf(". Additional request:%s", additionalRequestText)
+	}
 	session := model.StartChat()
 	session.History = []*genai.Content{
 		{
 			Role: "user",
 			Parts: []genai.Part{
-				genai.Text(fmt.Sprintf("Generate a list of problems to challenge the family member %s, on the topic of %s %s. Make the outputs in JSON format.", forUserId, problemSet.Title, problemSet.Description)),
+				genai.Text(fmt.Sprintf(
+					"Generate a list of problems to challenge the family member %s, "+
+						"on the topic of %s %s. Make the outputs in JSON format.",
+					forUserId,
+					problemSet.Title,
+					problemSet.Description,
+				)),
 			},
 		},
 		{
@@ -119,15 +129,27 @@ func generateProblems(
 		ctx,
 		genai.Text(fmt.Sprintf(
 			"base on the examples provided, please suggest next problems for family member %s, "+
-				"on the same topic of %s. Make the outputs in JSON format.", forUserId, problemSet.Title)),
+				"on the same topic of %s. Make the outputs in JSON format. "+
+				"Each problem should have a title and a list of answers, "+
+				"from which only one is correct.%s",
+			forUserId,
+			problemSet.Title,
+			additionalRequestText,
+		)),
 	)
 
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
 
+	strFullRespJson := ""
 	for _, part := range resp.Candidates[0].Content.Parts {
-		fmt.Printf("---\n\n%v\n\n---", part)
+		strFullRespJson += fmt.Sprintf("%s", part)
 	}
-	return shpanstream.EmptyStream[openapi.ApiProblemForEdit]()
+	var parsedJsonProblems []openapi.ApiProblemForEdit
+	err = json.Unmarshal([]byte(strFullRespJson), &parsedJsonProblems)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
+	}
+	return shpanstream.Just(parsedJsonProblems...)
 }

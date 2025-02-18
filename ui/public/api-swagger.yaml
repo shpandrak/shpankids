@@ -85,9 +85,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiGenerateProblemsCommandResp'
-
-
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiProblemForEdit'
 
   /api/commands/create-family-task:
     post:
@@ -542,10 +542,5 @@ components:
           type: string
         userId:
           type: string
-    ApiGenerateProblemsCommandResp:
-      type: object
-      required:
-        - problem
-      properties:
-        problem:
-          $ref: '#/components/schemas/ApiProblemForEdit'
+        additionalRequestText:
+          type: string

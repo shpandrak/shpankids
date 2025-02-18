@@ -2,10 +2,10 @@ import * as React from "react";
 import UiCtx from "../Common/UiCtx.ts";
 import {shpanKidsApi} from "../App.tsx";
 import {showError} from "../Util.ts";
-import {ApiProblemSet, UIFamilyInfo, UIFamilyMember} from "../../openapi";
+import {ApiProblemForEdit, ApiProblemSet, UIFamilyInfo, UIFamilyMember} from "../../openapi";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faList, faTrash} from "@fortawesome/free-solid-svg-icons";
-import ProblemEditor from "./ProblemEditor.tsx";
+import ProblemSetEditor from "./ProblemSetEditor.tsx";
 
 
 export interface ProblemSetsPageProps {
@@ -69,19 +69,36 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                                         problemSetId: problemSet.id
                                     })
                                         .then((problems) => {
-                                            setSubComponent((
-                                                <div>
-                                                    {problems.map((problem) => (
-                                                        <ProblemEditor key={problem.id}
-                                                                       uiCtx={props.uiCtx}
-                                                                       problem={problem}
-                                                                       onChanges={(updatedProb) => {
-                                                                           alert("Not implemented yet" + JSON.stringify(updatedProb, null, 2));
-                                                                       }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            ));
+                                            setSubComponent(
+                                                <ProblemSetEditor
+                                                    problemSet={problemSet}
+                                                    uiCtx={props.uiCtx}
+                                                    problems={problems}
+                                                    userId={familyMember.email}
+                                                    createNewProblemsHandler={(problemsToCreate): Promise<void> => {
+                                                        throw new Error("Not implemented yet");
+                                                    }}
+                                                    deleteProblemHandler={(problemsToEdit): Promise<void> => {
+                                                        throw new Error("Not implemented yet");
+                                                    }}
+                                                    updateProblemHandler={(problemSet: ApiProblemForEdit): Promise<void> => {
+                                                        throw new Error("Not implemented yet");
+                                                    }}
+                                                    updateProblemSetHandler={(problemSet: ApiProblemSet): Promise<void> => {
+                                                        throw new Error("Not implemented yet");
+                                                    }}
+                                                    generateProblemsHandler={(problemSetId: string, userId: string, additionalRequestText?: string): Promise<ApiProblemForEdit[]> => {
+                                                        return shpanKidsApi.generateProblems({
+                                                            apiGenerateProblemsCommandArgs: {
+                                                                problemSetId: problemSetId,
+                                                                userId: userId,
+                                                                additionalRequestText: additionalRequestText
+                                                            }
+                                                        })
+                                                    }}
+
+                                                />
+                                            );
                                         })
                                         .catch(showError);
                                 }}>

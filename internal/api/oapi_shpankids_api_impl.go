@@ -21,7 +21,10 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
-func (oa *OapiServerApiImpl) GenerateProblems(ctx context.Context, request openapi.GenerateProblemsRequestObject) (openapi.GenerateProblemsResponseObject, error) {
+func (oa *OapiServerApiImpl) GenerateProblems(
+	ctx context.Context,
+	request openapi.GenerateProblemsRequestObject,
+) (openapi.GenerateProblemsResponseObject, error) {
 	userId, err := oa.userSessionManager(ctx)
 	if err != nil {
 		return nil, err
@@ -32,8 +35,14 @@ func (oa *OapiServerApiImpl) GenerateProblems(ctx context.Context, request opena
 	}
 
 	return &streamingProblemsForEdit{
-		ctx:    ctx,
-		stream: oa.familyManager.GenerateNewProblems(ctx, s.FamilyId, request.Body.UserId, request.Body.ProblemSetId),
+		ctx: ctx,
+		stream: oa.familyManager.GenerateNewProblems(
+			ctx,
+			s.FamilyId,
+			request.Body.UserId,
+			request.Body.ProblemSetId,
+			castutil.StrPtrToStr(request.Body.AdditionalRequestText),
+		),
 	}, nil
 
 }

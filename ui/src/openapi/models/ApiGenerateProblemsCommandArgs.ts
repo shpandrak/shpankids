@@ -31,6 +31,12 @@ export interface ApiGenerateProblemsCommandArgs {
      * @memberof ApiGenerateProblemsCommandArgs
      */
     userId: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApiGenerateProblemsCommandArgs
+     */
+    additionalRequestText?: string;
 }
 
 /**
@@ -54,6 +60,7 @@ export function ApiGenerateProblemsCommandArgsFromJSONTyped(json: any, ignoreDis
         
         'problemSetId': json['problemSetId'],
         'userId': json['userId'],
+        'additionalRequestText': json['additionalRequestText'] == null ? undefined : json['additionalRequestText'],
     };
 }
 
@@ -65,6 +72,7 @@ export function ApiGenerateProblemsCommandArgsToJSON(value?: ApiGenerateProblems
         
         'problemSetId': value['problemSetId'],
         'userId': value['userId'],
+        'additionalRequestText': value['additionalRequestText'],
     };
 }
 

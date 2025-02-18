@@ -19,7 +19,6 @@ import type {
   ApiCreateFamilyTaskCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
   ApiGenerateProblemsCommandArgs,
-  ApiGenerateProblemsCommandResp,
   ApiLoadProblemForAssignmentCommandArgs,
   ApiLoadProblemForAssignmentCommandResult,
   ApiProblemForEdit,
@@ -37,8 +36,6 @@ import {
     ApiDeleteFamilyTaskCommandArgsToJSON,
     ApiGenerateProblemsCommandArgsFromJSON,
     ApiGenerateProblemsCommandArgsToJSON,
-    ApiGenerateProblemsCommandRespFromJSON,
-    ApiGenerateProblemsCommandRespToJSON,
     ApiLoadProblemForAssignmentCommandArgsFromJSON,
     ApiLoadProblemForAssignmentCommandArgsToJSON,
     ApiLoadProblemForAssignmentCommandResultFromJSON,
@@ -157,7 +154,7 @@ export class ShpankidsApi extends runtime.BaseAPI {
     /**
      * Generate problems for problem set
      */
-    async generateProblemsRaw(requestParameters: GenerateProblemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ApiGenerateProblemsCommandResp>> {
+    async generateProblemsRaw(requestParameters: GenerateProblemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiProblemForEdit>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -172,13 +169,13 @@ export class ShpankidsApi extends runtime.BaseAPI {
             body: ApiGenerateProblemsCommandArgsToJSON(requestParameters['apiGenerateProblemsCommandArgs']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ApiGenerateProblemsCommandRespFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiProblemForEditFromJSON));
     }
 
     /**
      * Generate problems for problem set
      */
-    async generateProblems(requestParameters: GenerateProblemsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiGenerateProblemsCommandResp> {
+    async generateProblems(requestParameters: GenerateProblemsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiProblemForEdit>> {
         const response = await this.generateProblemsRaw(requestParameters, initOverrides);
         return await response.value();
     }
