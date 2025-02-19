@@ -104,6 +104,21 @@ paths:
         '200':
           description: OK
 
+  /api/commands/create-problems-in-set:
+    post:
+      tags:
+        - shpankids
+      description: Create Problems in Set
+      operationId: createProblemsInSet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiCreateProblemsInSetCommandArgs'
+      responses:
+        '200':
+          description: OK
+
   /api/commands/delete-family-task:
     post:
       tags:
@@ -544,3 +559,19 @@ components:
           type: string
         additionalRequestText:
           type: string
+
+    ApiCreateProblemsInSetCommandArgs:
+      type: object
+      required:
+        - problemSetId
+        - problems
+        - forUserId
+      properties:
+        problemSetId:
+          type: string
+        forUserId:
+          type: string
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiProblemForEdit'

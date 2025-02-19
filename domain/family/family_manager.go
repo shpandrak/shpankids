@@ -3,6 +3,7 @@ package family
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"shpankids/infra/database/kvstore"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
@@ -144,20 +145,13 @@ func (m *Manager) CreateFamilyProblemSet(ctx context.Context, familyId string, f
 		})
 }
 
-func (m *Manager) CreateFamilyProblem(
+func (m *Manager) CreateFamilyProblemsInSet(
 	ctx context.Context,
 	familyId string,
 	forUserId string,
 	problemSetId string,
-	familyProblem shpankids.FamilyProblemDto,
+	familyProblem []shpankids.CreateProblemDto,
 ) error {
-	if familyProblem.ProblemId == "" {
-		return fmt.Errorf("problemId id is required")
-	}
-	if familyProblem.Title == "" {
-		return util.BadInputError(fmt.Errorf("title is required"))
-	}
-
 	// Get the user email from the context
 	uId, err := m.userSessionManager(ctx)
 	if err != nil {
@@ -176,7 +170,6 @@ func (m *Manager) CreateFamilyProblem(
 	if !isAdmin {
 		return util.ForbiddenError(fmt.Errorf("only admin can create family tasks for family %s", f.Name))
 	}
-
 	// Check if all task members are part of the family
 	famMembersSet := functional.SliceToSetExtractKeyNoErr(f.Members, func(member shpankids.FamilyMemberDto) string {
 		return member.UserId
@@ -186,43 +179,51 @@ func (m *Manager) CreateFamilyProblem(
 		return util.BadInputError(fmt.Errorf("user %s is not part of the family %s", forUserId, f.Name))
 	}
 
-	err = functional.CheckDuplicateSlice(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) string {
-		return a.Id
-	})
-	if err != nil {
-		return util.BadInputError(fmt.Errorf("duplicate alternative id found in problem"))
-	}
-
-	for _, a := range familyProblem.Alternatives {
-		if a.Id == "" {
-			return util.BadInputError(fmt.Errorf("alternative id is required"))
-		}
-		if a.Title == "" {
-			return util.BadInputError(fmt.Errorf("alternative title is required"))
-		}
-	}
-
 	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, forUserId, problemSetId)
 	if err != nil {
 		return err
 	}
+	createdTime := time.Now()
+	for _, p := range familyProblem {
+		if p.Title == "" {
+			return util.BadInputError(fmt.Errorf("title is required"))
+		}
 
-	// Create the family task in repo
-	return repo.Set(ctx, familyProblem.ProblemId, dbFamilyProblem{
-		Title:       familyProblem.Title,
-		Description: familyProblem.Description,
-		Created:     familyProblem.Created,
-		Hints:       familyProblem.Hints,
-		Explanation: familyProblem.Explanation,
-		Alternatives: functional.MapSliceNoErr(familyProblem.Alternatives, func(a shpankids.ProblemAlternativeDto) dbProblemAlternative {
-			return dbProblemAlternative{
-				Id:          a.Id,
+		if functional.CountSliceNoErr(p.Answers, func(a shpankids.CreateProblemAnswerDto) bool {
+			return a.Correct
+		}) != 1 {
+			return util.BadInputError(fmt.Errorf("one and only one correct answer is required for problem %s", p.Title))
+		}
+
+		for _, a := range p.Answers {
+			if a.Title == "" {
+				return util.BadInputError(fmt.Errorf("alternative title is required"))
+			}
+		}
+
+		dbAnswers := make(map[string]dbProblemAnswer, len(p.Answers))
+		for idx, a := range p.Answers {
+			dbAnswers[fmt.Sprintf("%d", idx)] = dbProblemAnswer{
 				Title:       a.Title,
 				Description: a.Description,
 				Correct:     a.Correct,
 			}
-		}),
-	})
+		}
+
+		// Create the family task in repo
+		err = repo.Set(ctx, uuid.NewString(), dbFamilyProblem{
+			Title:       p.Title,
+			Description: p.Description,
+			Created:     createdTime,
+			Hints:       p.Hints,
+			Explanation: p.Explanation,
+			Answers:     dbAnswers,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
@@ -355,13 +356,13 @@ func (m *Manager) ListFamilyProblemsForUser(
 
 func mapFamilyProblemDbToDto(e *functional.Entry[string, dbFamilyProblem]) *shpankids.FamilyProblemDto {
 	return &shpankids.FamilyProblemDto{
-		ProblemId:    e.Key,
-		Title:        e.Value.Title,
-		Description:  e.Value.Description,
-		Created:      e.Value.Created,
-		Hints:        e.Value.Hints,
-		Explanation:  e.Value.Explanation,
-		Alternatives: functional.MapSliceNoErr(e.Value.Alternatives, mapFamilyProblemAlternativeDbToDto),
+		ProblemId:   e.Key,
+		Title:       e.Value.Title,
+		Description: e.Value.Description,
+		Created:     e.Value.Created,
+		Hints:       e.Value.Hints,
+		Explanation: e.Value.Explanation,
+		Answers:     functional.MapToSliceNoErr(e.Value.Answers, mapFamilyProblemAlternativeDbToDto),
 	}
 }
 
@@ -399,9 +400,9 @@ func (m *Manager) GenerateNewProblems(
 		additionalRequestText,
 	)
 }
-func mapFamilyProblemAlternativeDbToDto(a dbProblemAlternative) shpankids.ProblemAlternativeDto {
-	return shpankids.ProblemAlternativeDto{
-		Id:          a.Id,
+func mapFamilyProblemAlternativeDbToDto(problemId string, a dbProblemAnswer) shpankids.ProblemAnswerDto {
+	return shpankids.ProblemAnswerDto{
+		Id:          problemId,
 		Title:       a.Title,
 		Description: a.Description,
 		Correct:     a.Correct,

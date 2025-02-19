@@ -2,7 +2,7 @@ import * as React from "react";
 import UiCtx from "../Common/UiCtx.ts";
 import {ApiProblemForEdit, ApiProblemSet} from "../../openapi";
 import {showError} from "../Util.ts";
-import ProblemEditor from "./ProblemEditor.tsx";
+import ProblemsSelectorComp, {SelectableProblem} from "./ProblemsSelectorComp.tsx";
 
 
 export interface ProblemSetEditorProps {
@@ -18,7 +18,7 @@ export interface ProblemSetEditorProps {
 }
 
 const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
-
+    const [suggestedProblems, setSuggestedProblems] = React.useState<SelectableProblem[]>();
 
     return (
         <div>
@@ -67,25 +67,27 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
                 <button onClick={() => {
                     const additionalText = window.prompt("Enter additional request text")
                     props.generateProblemsHandler(props.problemSet.id, props.userId, additionalText == null ? undefined : additionalText)
-                        .then((problems) => {
-                            props.uiCtx.showModal((
-                                <>
-                                    {problems.map((problem, idx) => (
-                                        <ProblemEditor
-                                            key={idx}
-                                            uiCtx={props.uiCtx}
-                                            problem={problem}
-                                            onChanges={(newProblem) => {
-                                                console.log(newProblem)
-                                            }
-                                            }></ProblemEditor>
-                                    ))}
-                                </>
-                            ))
-                        })
+                        .then(problems => problems.map((problem) => new SelectableProblem(problem, false)))
+                        .then(setSuggestedProblems)
                         .catch(showError)
                 }}>Generate Next Problems
                 </button>
+                {suggestedProblems && (
+                    <div>
+                        <ProblemsSelectorComp
+                            uiCtx={props.uiCtx}
+                            problems={suggestedProblems}
+                            updateProblems={setSuggestedProblems}
+                        />
+                        <button onClick={() => {
+                            const newProblems = suggestedProblems.filter((problem) => problem.selected).map((problem) => problem.problem);
+                            props.createNewProblemsHandler(newProblems)
+                                .then(() => setSuggestedProblems(undefined))
+                                .catch(showError)
+                        }}>Add Selected Problems
+                        </button>
+                    </div>
+                )}
             </div>
 
         </div>

@@ -37,7 +37,13 @@ type FamilyTaskDto struct {
 	StatusDate  time.Time
 }
 
-type ProblemAlternativeDto struct {
+type CreateProblemAnswerDto struct {
+	Title       string
+	Description string
+	Correct     bool
+}
+
+type ProblemAnswerDto struct {
 	Id          string
 	Title       string
 	Description string
@@ -45,13 +51,21 @@ type ProblemAlternativeDto struct {
 }
 
 type FamilyProblemDto struct {
-	ProblemId    string
-	Title        string
-	Description  string
-	Created      time.Time
-	Hints        []string
-	Explanation  string
-	Alternatives []ProblemAlternativeDto
+	ProblemId   string
+	Title       string
+	Description string
+	Created     time.Time
+	Hints       []string
+	Explanation string
+	Answers     []ProblemAnswerDto
+}
+
+type CreateProblemDto struct {
+	Title       string
+	Description string
+	Hints       []string
+	Explanation string
+	Answers     []CreateProblemAnswerDto
 }
 
 type FamilyProblemSetDto struct {
@@ -79,7 +93,7 @@ type FamilyManager interface {
 	ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[FamilyTaskDto]
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
 
-	CreateFamilyProblem(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem FamilyProblemDto) error
+	CreateFamilyProblemsInSet(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem []CreateProblemDto) error
 	CreateFamilyProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet FamilyProblemSetDto) error
 	ListFamilyProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
 	ListFamilyProblemsForUser(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]

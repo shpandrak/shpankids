@@ -76,7 +76,15 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                                                     problems={problems}
                                                     userId={familyMember.email}
                                                     createNewProblemsHandler={(problemsToCreate): Promise<void> => {
-                                                        throw new Error("Not implemented yet");
+                                                        return shpanKidsApi.createProblemsInSet(
+                                                            {
+                                                                apiCreateProblemsInSetCommandArgs: {
+                                                                    problemSetId: problemSet.id,
+                                                                    problems: problemsToCreate,
+                                                                    forUserId: familyMember.email
+                                                                }
+                                                            }
+                                                        )
                                                     }}
                                                     deleteProblemHandler={(problemsToEdit): Promise<void> => {
                                                         throw new Error("Not implemented yet");
@@ -87,7 +95,10 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                                                     updateProblemSetHandler={(problemSet: ApiProblemSet): Promise<void> => {
                                                         throw new Error("Not implemented yet");
                                                     }}
-                                                    generateProblemsHandler={(problemSetId: string, userId: string, additionalRequestText?: string): Promise<ApiProblemForEdit[]> => {
+                                                    generateProblemsHandler={(
+                                                        problemSetId: string,
+                                                        userId: string,
+                                                        additionalRequestText?: string): Promise<ApiProblemForEdit[]> => {
                                                         return shpanKidsApi.generateProblems({
                                                             apiGenerateProblemsCommandArgs: {
                                                                 problemSetId: problemSetId,
