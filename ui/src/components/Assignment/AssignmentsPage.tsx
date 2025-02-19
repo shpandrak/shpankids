@@ -110,8 +110,6 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
                                                                 } else {
                                                                     alert("That is not correct, not sure what is the correct answer");
                                                                 }
-
-
                                                             }
                                                         })
                                                     .catch(showError)
@@ -126,7 +124,6 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
                             </button>
                         )}
                     </li>
-
                 ))}
             </ol>
 

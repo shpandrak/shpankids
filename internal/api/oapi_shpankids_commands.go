@@ -70,3 +70,26 @@ func (oa *OapiServerApiImpl) DeleteFamilyTask(
 	}
 	return openapi.DeleteFamilyTask200Response{}, nil
 }
+
+func (oa *OapiServerApiImpl) CreateProblemSet(
+	ctx context.Context,
+	request openapi.CreateProblemSetRequestObject,
+) (openapi.CreateProblemSetResponseObject, error) {
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = oa.familyManager.CreateProblemSet(
+		ctx,
+		s.FamilyId,
+		request.Body.ForUserId,
+		shpankids.CreateProblemSetDto{
+			ProblemSetId: uuid.NewString(),
+			Title:        request.Body.Title,
+			Description:  castutil.StrPtrToStr(request.Body.Description),
+		})
+	if err != nil {
+		return nil, err
+	}
+	return openapi.CreateProblemSet200Response{}, nil
+}

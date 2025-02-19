@@ -114,7 +114,7 @@ func (m *managerImpl) doListAssignments(
 	//todo:amit:just return a stream from here...
 	return shpanstream.ConcatenatedStream(
 		m.filterTaskAssignmentsForUser(ctx, forDate, familyTasks, userId),
-		shpanstream.MapStream(m.familyManager.ListFamilyProblemSetsForUser(ctx, familyId, userId), func(fps *shpankids.FamilyProblemSetDto) *shpankids.Assignment {
+		shpanstream.MapStream(m.familyManager.ListProblemSetsForUser(ctx, familyId, userId), func(fps *shpankids.FamilyProblemSetDto) *shpankids.Assignment {
 			return mapProblemSetToAssignment(fps, forDate)
 		},
 		))

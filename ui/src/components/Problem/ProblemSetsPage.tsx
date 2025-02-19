@@ -6,6 +6,7 @@ import {ApiProblemForEdit, ApiProblemSet, UIFamilyInfo, UIFamilyMember} from "..
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faList, faTrash} from "@fortawesome/free-solid-svg-icons";
 import ProblemSetEditor from "./ProblemSetEditor.tsx";
+import ProblemSetDetailsEditor from "./ProblemSetDetailsEditor.tsx";
 
 
 export interface ProblemSetsPageProps {
@@ -13,6 +14,11 @@ export interface ProblemSetsPageProps {
     familyInfo: UIFamilyInfo;
 }
 
+const newPs = {
+    id: "",
+    title: "New problem set",
+    description: ""
+};
 const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
 
 
@@ -20,8 +26,10 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
     const [loading, setLoading] = React.useState(true);
     const [problemSets, setProblemSets] = React.useState<ApiProblemSet[]>();
     const [subComponent, setSubComponent] = React.useState<React.JSX.Element>();
+    const [newProblemSet, setNewProblemSet] = React.useState<ApiProblemSet>();
 
-    React.useEffect(() => {
+    function reloadProblemSets() {
+        setNewProblemSet(undefined);
         setLoading(true);
         shpanKidsApi.listUserFamilyProblemSets(
             {
@@ -32,9 +40,64 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
             .then(setProblemSets)
             .then(() => setLoading(false))
             .catch(showError);
+    }
 
-
+    React.useEffect(() => {
+        reloadProblemSets();
     }, [familyMember]);
+
+    function reloadProblemsList(problemSet: ApiProblemSet) {
+        shpanKidsApi.listProblemSetProblems({
+            userId: familyMember.email,
+            problemSetId: problemSet.id
+        })
+            .then((problems) => {
+                setSubComponent(
+                    <ProblemSetEditor
+                        problemSet={problemSet}
+                        uiCtx={props.uiCtx}
+                        problems={problems}
+                        userId={familyMember.email}
+                        createNewProblemsHandler={(problemsToCreate): Promise<void> => {
+                            return shpanKidsApi.createProblemsInSet(
+                                {
+                                    apiCreateProblemsInSetCommandArgs: {
+                                        problemSetId: problemSet.id,
+                                        problems: problemsToCreate,
+                                        forUserId: familyMember.email
+                                    }
+                                }
+                            ).then(() => {
+                                reloadProblemsList(problemSet);
+                            });
+                        }}
+                        deleteProblemHandler={(problemsToEdit): Promise<void> => {
+                            throw new Error("Not implemented yet");
+                        }}
+                        updateProblemHandler={(problemSet: ApiProblemForEdit): Promise<void> => {
+                            throw new Error("Not implemented yet");
+                        }}
+                        updateProblemSetHandler={(problemSet: ApiProblemSet): Promise<void> => {
+                            throw new Error("Not implemented yet");
+                        }}
+                        generateProblemsHandler={(
+                            problemSetId: string,
+                            userId: string,
+                            additionalRequestText?: string): Promise<ApiProblemForEdit[]> => {
+                            return shpanKidsApi.generateProblems({
+                                apiGenerateProblemsCommandArgs: {
+                                    problemSetId: problemSetId,
+                                    userId: userId,
+                                    additionalRequestText: additionalRequestText
+                                }
+                            })
+                        }}
+
+                    />
+                );
+            })
+            .catch(showError);
+    }
 
     return (
         <div>
@@ -45,6 +108,8 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                 <div>
                     <select value={familyMember.email} onChange={
                         (e) => {
+                            setSubComponent(undefined);
+                            setNewProblemSet(undefined);
                             setSelectedFamilyMember(props.familyInfo.members.find((member) => member.email === e.target.value)!)
                         }
                     }>
@@ -64,54 +129,7 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                             <td>{problemSet.description}</td>
                             <td>
                                 <button onClick={() => {
-                                    shpanKidsApi.listProblemSetProblems({
-                                        userId: familyMember.email,
-                                        problemSetId: problemSet.id
-                                    })
-                                        .then((problems) => {
-                                            setSubComponent(
-                                                <ProblemSetEditor
-                                                    problemSet={problemSet}
-                                                    uiCtx={props.uiCtx}
-                                                    problems={problems}
-                                                    userId={familyMember.email}
-                                                    createNewProblemsHandler={(problemsToCreate): Promise<void> => {
-                                                        return shpanKidsApi.createProblemsInSet(
-                                                            {
-                                                                apiCreateProblemsInSetCommandArgs: {
-                                                                    problemSetId: problemSet.id,
-                                                                    problems: problemsToCreate,
-                                                                    forUserId: familyMember.email
-                                                                }
-                                                            }
-                                                        )
-                                                    }}
-                                                    deleteProblemHandler={(problemsToEdit): Promise<void> => {
-                                                        throw new Error("Not implemented yet");
-                                                    }}
-                                                    updateProblemHandler={(problemSet: ApiProblemForEdit): Promise<void> => {
-                                                        throw new Error("Not implemented yet");
-                                                    }}
-                                                    updateProblemSetHandler={(problemSet: ApiProblemSet): Promise<void> => {
-                                                        throw new Error("Not implemented yet");
-                                                    }}
-                                                    generateProblemsHandler={(
-                                                        problemSetId: string,
-                                                        userId: string,
-                                                        additionalRequestText?: string): Promise<ApiProblemForEdit[]> => {
-                                                        return shpanKidsApi.generateProblems({
-                                                            apiGenerateProblemsCommandArgs: {
-                                                                problemSetId: problemSetId,
-                                                                userId: userId,
-                                                                additionalRequestText: additionalRequestText
-                                                            }
-                                                        })
-                                                    }}
-
-                                                />
-                                            );
-                                        })
-                                        .catch(showError);
+                                    reloadProblemsList(problemSet);
                                 }}>
                                     <FontAwesomeIcon icon={faList}/>
                                 </button>
@@ -125,8 +143,40 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                     ))}
                     </tbody>
                 </table>
+                <button onClick={() => {
+                    setNewProblemSet(newPs);
+                }}>Create New Problem Set
+                </button>
+
             </div>}
             {subComponent}
+            {newProblemSet && (
+                <div>
+                    <h3>
+                        Create New Problem Set
+                    </h3>
+                    <ProblemSetDetailsEditor
+                        problemSet={newProblemSet}
+                        uiCtx={props.uiCtx}
+                        onChange={setNewProblemSet}
+                    />
+                    <button onClick={() => {
+                        shpanKidsApi.createProblemSet({
+                            apiCreateProblemSetCommandArgs: {
+                                title: newProblemSet?.title ?? "",
+                                description: newProblemSet?.description ?? "",
+                                forUserId: familyMember.email
+                            }
+                        })
+                            .then(() => {
+                                reloadProblemSets()
+                            })
+                            .catch(showError);
+                    }}>
+                        Create
+                    </button>
+                </div>
+            )}
         </div>
     );
 

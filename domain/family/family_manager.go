@@ -126,26 +126,26 @@ func (m *Manager) CreateFamilyTask(ctx context.Context, familyId string, familyT
 		StatusDate:  familyTask.Created,
 	})
 }
-func (m *Manager) CreateFamilyProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet shpankids.FamilyProblemSetDto) error {
+func (m *Manager) CreateProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet shpankids.CreateProblemSetDto) error {
 	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, forUserId)
 	if err != nil {
 		return err
 	}
+	createTime := time.Now()
 	// Create the family task in repo
-	familyProblemSet.Created = time.Now()
 	return psRepo.Set(
 		ctx,
 		familyProblemSet.ProblemSetId,
 		dbFamilyProblemSet{
 			Title:       familyProblemSet.Title,
 			Description: familyProblemSet.Description,
-			Created:     familyProblemSet.Created,
+			Created:     createTime,
 			Status:      shpankids.FamilyAssignmentStatusActive,
-			StatusDate:  familyProblemSet.Created,
+			StatusDate:  createTime,
 		})
 }
 
-func (m *Manager) CreateFamilyProblemsInSet(
+func (m *Manager) CreateProblemsInSet(
 	ctx context.Context,
 	familyId string,
 	forUserId string,
@@ -365,7 +365,7 @@ func (m *Manager) DeleteFamilyTask(ctx context.Context, familyId string, familyT
 	return repo.Set(ctx, familyTaskId, ft)
 }
 
-func (m *Manager) ListFamilyProblemSetsForUser(
+func (m *Manager) ListProblemSetsForUser(
 	ctx context.Context,
 	familyId string,
 	userId string,
@@ -379,7 +379,7 @@ func (m *Manager) ListFamilyProblemSetsForUser(
 	return shpanstream.MapStream(repo.Stream(ctx), mapFamilyProblemSetDbToDto)
 }
 
-func (m *Manager) ListFamilyProblemsForUser(
+func (m *Manager) ListProblemsForProblemSet(
 	ctx context.Context,
 	familyId string,
 	userId string,
@@ -437,7 +437,7 @@ func (m *Manager) GenerateNewProblems(
 		ctx,
 		userId,
 		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbFamilyProblemSet]{Key: problemSetId, Value: dbProblemSet}),
-		m.ListFamilyProblemsForUser(ctx, familyId, userId, problemSetId),
+		m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId),
 		additionalRequestText,
 	)
 }
