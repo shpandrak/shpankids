@@ -16,6 +16,8 @@ export * from './ApiProblemAnswer';
 export * from './ApiProblemAnswerForEdit';
 export * from './ApiProblemForEdit';
 export * from './ApiProblemSet';
+export * from './ApiSubmitProblemAnswerCommandArgs';
+export * from './ApiSubmitProblemAnswerCommandResp';
 export * from './ApiTaskStats';
 export * from './ApiUpdateFamilyTaskCommandArgs';
 export * from './ApiUpdateTaskStatusCommandArgs';

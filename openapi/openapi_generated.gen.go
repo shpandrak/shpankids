@@ -142,6 +142,20 @@ type ApiProblemSet struct {
 	Title       string  `json:"title"`
 }
 
+// ApiSubmitProblemAnswerCommandArgs defines model for ApiSubmitProblemAnswerCommandArgs.
+type ApiSubmitProblemAnswerCommandArgs struct {
+	AnswerId     string `json:"answerId"`
+	AssignmentId string `json:"assignmentId"`
+	ProblemId    string `json:"problemId"`
+}
+
+// ApiSubmitProblemAnswerCommandResp defines model for ApiSubmitProblemAnswerCommandResp.
+type ApiSubmitProblemAnswerCommandResp struct {
+	CorrectAnswerId string  `json:"correctAnswerId"`
+	Explanation     *string `json:"explanation,omitempty"`
+	IsCorrect       bool    `json:"isCorrect"`
+}
+
 // ApiTaskStats defines model for ApiTaskStats.
 type ApiTaskStats struct {
 	DoneTasksCount  int       `json:"doneTasksCount"`
@@ -233,6 +247,9 @@ type GenerateProblemsJSONRequestBody = ApiGenerateProblemsCommandArgs
 // LoadProblemForAssignmentJSONRequestBody defines body for LoadProblemForAssignment for application/json ContentType.
 type LoadProblemForAssignmentJSONRequestBody = ApiLoadProblemForAssignmentCommandArgs
 
+// SubmitProblemAnswerJSONRequestBody defines body for SubmitProblemAnswer for application/json ContentType.
+type SubmitProblemAnswerJSONRequestBody = ApiSubmitProblemAnswerCommandArgs
+
 // UpdateFamilyTaskJSONRequestBody defines body for UpdateFamilyTask for application/json ContentType.
 type UpdateFamilyTaskJSONRequestBody = ApiUpdateFamilyTaskCommandArgs
 
@@ -259,6 +276,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/submit-problem-answer)
+	SubmitProblemAnswer(w http.ResponseWriter, r *http.Request)
 
 	// (POST /api/commands/update-family-task)
 	UpdateFamilyTask(w http.ResponseWriter, r *http.Request)
@@ -372,6 +392,21 @@ func (siw *ServerInterfaceWrapper) LoadProblemForAssignment(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LoadProblemForAssignment(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// SubmitProblemAnswer operation middleware
+func (siw *ServerInterfaceWrapper) SubmitProblemAnswer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitProblemAnswer(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -681,6 +716,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/load-problem-for-assignment", wrapper.LoadProblemForAssignment).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/commands/submit-problem-answer", wrapper.SubmitProblemAnswer).Methods("POST")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/update-family-task", wrapper.UpdateFamilyTask).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-task-status", wrapper.UpdateTaskStatus).Methods("POST")
@@ -790,6 +827,23 @@ type LoadProblemForAssignmentResponseObject interface {
 type LoadProblemForAssignment200JSONResponse ApiLoadProblemForAssignmentCommandResult
 
 func (response LoadProblemForAssignment200JSONResponse) VisitLoadProblemForAssignmentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitProblemAnswerRequestObject struct {
+	Body *SubmitProblemAnswerJSONRequestBody
+}
+
+type SubmitProblemAnswerResponseObject interface {
+	VisitSubmitProblemAnswerResponse(w http.ResponseWriter) error
+}
+
+type SubmitProblemAnswer200JSONResponse ApiSubmitProblemAnswerCommandResp
+
+func (response SubmitProblemAnswer200JSONResponse) VisitSubmitProblemAnswerResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -932,6 +986,9 @@ type StrictServerInterface interface {
 
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(ctx context.Context, request LoadProblemForAssignmentRequestObject) (LoadProblemForAssignmentResponseObject, error)
+
+	// (POST /api/commands/submit-problem-answer)
+	SubmitProblemAnswer(ctx context.Context, request SubmitProblemAnswerRequestObject) (SubmitProblemAnswerResponseObject, error)
 
 	// (POST /api/commands/update-family-task)
 	UpdateFamilyTask(ctx context.Context, request UpdateFamilyTaskRequestObject) (UpdateFamilyTaskResponseObject, error)
@@ -1163,6 +1220,37 @@ func (sh *strictHandler) LoadProblemForAssignment(w http.ResponseWriter, r *http
 	}
 }
 
+// SubmitProblemAnswer operation middleware
+func (sh *strictHandler) SubmitProblemAnswer(w http.ResponseWriter, r *http.Request) {
+	var request SubmitProblemAnswerRequestObject
+
+	var body SubmitProblemAnswerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitProblemAnswer(ctx, request.(SubmitProblemAnswerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitProblemAnswer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitProblemAnswerResponseObject); ok {
+		if err := validResponse.VisitSubmitProblemAnswerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UpdateFamilyTask operation middleware
 func (sh *strictHandler) UpdateFamilyTask(w http.ResponseWriter, r *http.Request) {
 	var request UpdateFamilyTaskRequestObject
@@ -1355,31 +1443,33 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"TKOrKVUoAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

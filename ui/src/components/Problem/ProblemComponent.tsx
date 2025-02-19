@@ -6,6 +6,7 @@ import {ApiProblem} from "../../openapi";
 export interface ProblemComponentProps {
     uiCtx: UiCtx;
     problem: ApiProblem;
+    submitAnswer: (answerId: string) => void;
 }
 
 const ProblemComponent: React.FC<ProblemComponentProps> = (props) => {
@@ -25,7 +26,7 @@ const ProblemComponent: React.FC<ProblemComponentProps> = (props) => {
                 <table>
                     <tbody>
 
-                        {props.problem.answers.map((answer) => (
+                    {props.problem.answers.map((answer) => (
                         <tr key={answer.id}>
                             <td>
                                 <input type="radio"
@@ -44,6 +45,9 @@ const ProblemComponent: React.FC<ProblemComponentProps> = (props) => {
                 </table>
 
             </div>
+            <button onClick={() => {
+                props.submitAnswer(selectedAnswerId!)
+            }} disabled={!selectedAnswerId}>Submit</button>
         </div>
     );
 }
