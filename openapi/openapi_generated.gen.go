@@ -64,6 +64,13 @@ type ApiCreateFamilyTaskCommandArgs struct {
 	Task ApiFamilyTask `json:"task"`
 }
 
+// ApiCreateProblemSetCommandArgs defines model for ApiCreateProblemSetCommandArgs.
+type ApiCreateProblemSetCommandArgs struct {
+	Description *string `json:"description,omitempty"`
+	ForUserId   string  `json:"forUserId"`
+	Title       string  `json:"title"`
+}
+
 // ApiCreateProblemsInSetCommandArgs defines model for ApiCreateProblemsInSetCommandArgs.
 type ApiCreateProblemsInSetCommandArgs struct {
 	ForUserId    string              `json:"forUserId"`
@@ -238,6 +245,9 @@ type CreateFamilyTaskJSONRequestBody = ApiCreateFamilyTaskCommandArgs
 // CreateProblemsInSetJSONRequestBody defines body for CreateProblemsInSet for application/json ContentType.
 type CreateProblemsInSetJSONRequestBody = ApiCreateProblemsInSetCommandArgs
 
+// CreateProblemSetJSONRequestBody defines body for CreateProblemSet for application/json ContentType.
+type CreateProblemSetJSONRequestBody = ApiCreateProblemSetCommandArgs
+
 // DeleteFamilyTaskJSONRequestBody defines body for DeleteFamilyTask for application/json ContentType.
 type DeleteFamilyTaskJSONRequestBody = ApiDeleteFamilyTaskCommandArgs
 
@@ -267,6 +277,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/create-problems-in-set)
 	CreateProblemsInSet(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/create-problemset)
+	CreateProblemSet(w http.ResponseWriter, r *http.Request)
 
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(w http.ResponseWriter, r *http.Request)
@@ -347,6 +360,21 @@ func (siw *ServerInterfaceWrapper) CreateProblemsInSet(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProblemsInSet(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// CreateProblemSet operation middleware
+func (siw *ServerInterfaceWrapper) CreateProblemSet(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateProblemSet(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -710,6 +738,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/create-problems-in-set", wrapper.CreateProblemsInSet).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/commands/create-problemset", wrapper.CreateProblemSet).Methods("POST")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/delete-family-task", wrapper.DeleteFamilyTask).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/generate-problems", wrapper.GenerateProblems).Methods("POST")
@@ -779,6 +809,22 @@ type CreateProblemsInSet200Response struct {
 }
 
 func (response CreateProblemsInSet200Response) VisitCreateProblemsInSetResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CreateProblemSetRequestObject struct {
+	Body *CreateProblemSetJSONRequestBody
+}
+
+type CreateProblemSetResponseObject interface {
+	VisitCreateProblemSetResponse(w http.ResponseWriter) error
+}
+
+type CreateProblemSet200Response struct {
+}
+
+func (response CreateProblemSet200Response) VisitCreateProblemSetResponse(w http.ResponseWriter) error {
 	w.WriteHeader(200)
 	return nil
 }
@@ -978,6 +1024,9 @@ type StrictServerInterface interface {
 	// (POST /api/commands/create-problems-in-set)
 	CreateProblemsInSet(ctx context.Context, request CreateProblemsInSetRequestObject) (CreateProblemsInSetResponseObject, error)
 
+	// (POST /api/commands/create-problemset)
+	CreateProblemSet(ctx context.Context, request CreateProblemSetRequestObject) (CreateProblemSetResponseObject, error)
+
 	// (POST /api/commands/delete-family-task)
 	DeleteFamilyTask(ctx context.Context, request DeleteFamilyTaskRequestObject) (DeleteFamilyTaskResponseObject, error)
 
@@ -1120,6 +1169,37 @@ func (sh *strictHandler) CreateProblemsInSet(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProblemsInSetResponseObject); ok {
 		if err := validResponse.VisitCreateProblemsInSetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateProblemSet operation middleware
+func (sh *strictHandler) CreateProblemSet(w http.ResponseWriter, r *http.Request) {
+	var request CreateProblemSetRequestObject
+
+	var body CreateProblemSetJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateProblemSet(ctx, request.(CreateProblemSetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateProblemSet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateProblemSetResponseObject); ok {
+		if err := validResponse.VisitCreateProblemSetResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1443,33 +1523,33 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"TKOrKVUoAAA=",
+	"H4sIAAAAAAAC/9xZS4/bNhD+KwLboxyn7c03dzcJjKRtsI9TkANtjR1mJVIhqTSLhf97wYdMPUhKWluL",
+	"oDdbooYz3zfkcD4+oR0rSkaBSoFWT0jsvkCB9c91SdZCkAMtgEr1oOSsBC4J6NcZiB0npSSMqr/ysQS0",
+	"QkJyQg/omKI949dYgnq3Z7zAEq1QhiUsJCkApf0PSOa1IySWlZ7xVw57tEK/LJ3LS+vvsuXsrfnkmCJJ",
+	"ZA5es+bBBKN36oPjMUUcvlWEQ4ZWn5TP1lQ9lwv85PrnU7Bs+xV2Uk3v83f1hIBWhbLLSqAoRRmjys42",
+	"Z7sHUFMRziGH75jKhlUXVN/hhk2JxQNKFYvbHIpbCJq44oAlvMUFyR/vsHi4YkWBabbmB9FPA211GEdn",
+	"rYehthDAyLjy8eRy1JURGXkvgG/8eRZKla63jmVrbIzrYkOHvI9751iLD9CmiLQ/Bkixzr1l/E1GpFsV",
+	"CHOOH3uht3xozDgCjGvIYVJKeaP0JE54SjPZDctbiwBnBVErq4BiCzy0AhrZOjnLjOVN1mYisP/USI9O",
+	"P7Ph2Bx0UwUweAcUeCMLo7DjLCMqKpzfwLcKhLyDH/J5yViFEjmeUVU0hz4wnLmMdftcPKjTsICrE8tU",
+	"J4CWeWfseRHcgKhyT6W1KI1f0CGcQ359dBN00KPiX+DP2VPW+ktfog+tH3LW9txaH7X78bCtq5MX+sUc",
+	"HeNevUdfyksirhjnajL3dstYDpg+oxg6a/FYglGcm2jBEjZ3vk1LNXXo+uny7LbaFkS24IxvqXpIYDsd",
+	"3G/tVjSmOnQ2V/dl6nyYHNMNiLIf086k7zoWGvwoc0xxmKfYkuqychqb9uYOhKROI6pR8B18GQX1Wlyx",
+	"ijanJ1TCwWzDk9sxySTOh6yOLfSuJ7JfpF2n+xMGcLgvs5+lOzGu1MRU8ePVjhV1I31+r3xeUzztfD2y",
+	"o73fGBQ3dM962xoy7xKiXqa9g2dB6JsCk7wFAOgnnuD32tY1EWWOH//Ghb/BN6PuOYmc0scXnDq6v0zf",
+	"4DvAq8ydbM/k3EDj5UJJm2D5kHCR1R7FuLLRhNiyTVKXL5hAFeFCBinKceQlt53bqKWr27wubLVXzonG",
+	"lHaCGDrP6/8C5fqnaQvvN7pV965S9SbZ+NYovOzyfHbehFLAs1CcB32YlB1iIbIUoNsvJabvSSaS9ccN",
+	"StF34MLA9vrVb8otVgLFJUEr9Mcr9ShFJZZfNHxLXJKlO8/oZwdzGGwzkBMhk3VjoDbL9alD7dnoAxGy",
+	"/Z6DKBkVhqffX782xYZKW2xwWeZkpw0svwqTtGb9TDltN5Tg/m7VPWWjf95rJiRWhfATEgq5B6ISUj3W",
+	"YOxMrRTLndbJFoaNRV2wSyY86BhNLbHb050RNNv4dMVLZBIChPyTZY+TsBmAJCaTHo8mE/vMnA1ULbst",
+	"CF0I20/EwKq1n4TQRPUffsBaOuXcmAVF0ReAbTxiw2i9HFQvgFOmJdpx69DIudF12FV85wMqpi3PAdTB",
+	"iqqLpuTux6nWX5N6aLJnvP6TCE9+dRXb+WCLacNh2C5eWAbvIM4qLjnDWc3TYs/4ArdvNL2sfWA4EwmF",
+	"H/JElaKt8WmvKAeE3fnYGyOGX4DF87ywgvaZHAqt5ZxYxE6u9bJnpJ8Tc3Z4lzGPQDQfWQMK2/w8Dchh",
+	"ZxJUaRlkXOUwkkm0cnQFnvl4iUlJc1QOC5RCaOEUnChQyq3ESjd+oJz8NDdQfqHrgkDZDKpXuoChRqlx",
+	"UhN2f062j4mx422dVIdrCHcnK6E7NY4LkFoS+uRvi6+R6gnRCn2rgCvrVLegTtF0jafkFaQNeLtN6ueX",
+	"La7qnHqZwuphaPnUvMU9Lk/9iSq3YG97RlHoWhVVbtWnCi0fiy6uxjkpSmFzGsek6s8dkZ3b6PF0pv+3",
+	"hLnsaUzUtxbeLNA7nBpChCQ74TkRS3PtMcDwW86KJDMytQ/1PWcFamI87rq/5y6LTSLZ9Cleilt3gXQZ",
+	"Wqt6O6i1RC+970AmAoQgjNp9ub4E6NHcuD+Y8TjUuqcYjvx+0w65aoinwYBzdjhAlhCaqOHBgE9C7Kzh",
+	"nmYZG6x78FTndVv7PH4+/hcAAP//l5YphDgqAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

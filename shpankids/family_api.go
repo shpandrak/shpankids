@@ -77,6 +77,12 @@ type FamilyProblemSetDto struct {
 	StatusDate   time.Time
 }
 
+type CreateProblemSetDto struct {
+	ProblemSetId string
+	Title        string
+	Description  string
+}
+
 type FamilyAssignmentStatus string
 
 const (
@@ -93,10 +99,10 @@ type FamilyManager interface {
 	ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[FamilyTaskDto]
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
 
-	CreateFamilyProblemsInSet(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem []CreateProblemDto) error
-	CreateFamilyProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet FamilyProblemSetDto) error
-	ListFamilyProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
-	ListFamilyProblemsForUser(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]
+	CreateProblemsInSet(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem []CreateProblemDto) error
+	CreateProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet CreateProblemSetDto) error
+	ListProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
+	ListProblemsForProblemSet(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]
 
 	GenerateNewProblems(
 		ctx context.Context,

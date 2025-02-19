@@ -4,6 +4,7 @@ export * from './ApiAssignment';
 export * from './ApiAssignmentStatus';
 export * from './ApiAssignmentType';
 export * from './ApiCreateFamilyTaskCommandArgs';
+export * from './ApiCreateProblemSetCommandArgs';
 export * from './ApiCreateProblemsInSetCommandArgs';
 export * from './ApiDeleteFamilyTaskCommandArgs';
 export * from './ApiFamilyRole';

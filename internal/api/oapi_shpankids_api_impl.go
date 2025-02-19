@@ -55,7 +55,7 @@ func (oa *OapiServerApiImpl) CreateProblemsInSet(
 	if err != nil {
 		return nil, err
 	}
-	err = oa.familyManager.CreateFamilyProblemsInSet(
+	err = oa.familyManager.CreateProblemsInSet(
 		ctx,
 		s.FamilyId,
 		request.Body.ForUserId,
@@ -130,7 +130,7 @@ func (oa *OapiServerApiImpl) ListProblemSetProblems(
 	return &streamingProblemsForEdit{
 		ctx: ctx,
 		stream: shpanstream.MapStream(
-			oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, request.Params.UserId, request.ProblemSetId),
+			oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, request.Params.UserId, request.ProblemSetId),
 			ToApiProblemForEdit,
 		),
 	}, nil
@@ -164,7 +164,7 @@ func (oa *OapiServerApiImpl) ListUserFamilyProblemSets(
 	}
 	return &streamingProblemSets{
 		stream: shpanstream.MapStream(
-			oa.familyManager.ListFamilyProblemSetsForUser(ctx, s.FamilyId, request.Params.UserId),
+			oa.familyManager.ListProblemSetsForUser(ctx, s.FamilyId, request.Params.UserId),
 			toApiProblemSet,
 		),
 		ctx: ctx,
@@ -188,7 +188,7 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 	}
 
 	first, err := shpanstream.MapStreamWithError(
-		oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, userId, request.Body.AssignmentId),
+		oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, userId, request.Body.AssignmentId),
 		toApiProblem,
 	).FindFirst(ctx)
 	if err != nil {

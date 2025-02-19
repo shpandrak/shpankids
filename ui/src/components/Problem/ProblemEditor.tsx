@@ -53,11 +53,8 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
                                     <input type="text" value={answer.title} onChange={
                                         (e) => props.onChanges({
                                             ...props.problem,
-                                            answers: props.problem.answers.map((a) => {
-                                                if (a.id === answer.id) {
-                                                    return {...a, title: e.target.value};
-                                                }
-                                                return a;
+                                            answers: props.problem.answers.map((a, innerIdx) => {
+                                                return innerIdx === idx ? {...a, title: e.target.value} : a;
                                             })
                                         })
                                     }/>
@@ -78,7 +75,7 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
                                 <td>
                                     <button onClick={() => props.onChanges({
                                         ...props.problem,
-                                        answers: props.problem.answers.filter((a, idx) => idx !== idx)
+                                        answers: props.problem.answers.filter((_, idx) => idx !== idx)
                                     })}><FontAwesomeIcon title={"Remove Answer"} icon={faTrash}/></button>
                                 </td>
                             </tr>

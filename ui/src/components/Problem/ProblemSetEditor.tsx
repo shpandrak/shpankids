@@ -3,6 +3,7 @@ import UiCtx from "../Common/UiCtx.ts";
 import {ApiProblemForEdit, ApiProblemSet} from "../../openapi";
 import {showError} from "../Util.ts";
 import ProblemsSelectorComp, {SelectableProblem} from "./ProblemsSelectorComp.tsx";
+import ProblemEditor from "./ProblemEditor.tsx";
 
 
 export interface ProblemSetEditorProps {
@@ -19,6 +20,7 @@ export interface ProblemSetEditorProps {
 
 const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
     const [suggestedProblems, setSuggestedProblems] = React.useState<SelectableProblem[]>();
+    const [newProblem, setNewProblem] = React.useState<ApiProblemForEdit>();
 
     return (
         <div>
@@ -72,6 +74,19 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
                         .catch(showError)
                 }}>Generate Next Problems
                 </button>
+                <button onClick={
+                    () => setNewProblem({
+                        title: "new problem",
+                        description: "",
+                        answers: [
+                            {title: "answer 1", isCorrect: false, description: ""},
+                            {title: "answer 1", isCorrect: true, description: ""},
+                        ]
+                    })
+                }>
+                    Create a Problem Manually
+                </button>
+
                 {suggestedProblems && (
                     <div>
                         <ProblemsSelectorComp
@@ -89,9 +104,22 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
                     </div>
                 )}
             </div>
+            {newProblem && (
+                <div>
+                    <h3>Create a Problem</h3>
+                    <ProblemEditor uiCtx={props.uiCtx} problem={newProblem} onChanges={setNewProblem}/>
+                    <button onClick={() => {
+                        props.createNewProblemsHandler([newProblem])
+                            .then(() => setNewProblem(undefined))
+                            .then(() => setSuggestedProblems(undefined))
+                            .catch(showError)
+                    }}>Create Problem
+                    </button>
 
+                </div>
+            )}
         </div>
     );
-
 }
+
 export default ProblemSetEditor;

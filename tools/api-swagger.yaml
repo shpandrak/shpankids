@@ -138,6 +138,21 @@ paths:
         '200':
           description: OK
 
+  /api/commands/create-problemset:
+    post:
+      tags:
+        - shpankids
+      description: Create Problem Set
+      operationId: createProblemSet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiCreateProblemSetCommandArgs'
+      responses:
+        '200':
+          description: OK
+
   /api/commands/delete-family-task:
     post:
       tags:
@@ -620,4 +635,17 @@ components:
           correctAnswerId:
             type: string
           explanation:
+            type: string
+
+    ApiCreateProblemSetCommandArgs:
+        type: object
+        required:
+            - title
+            - forUserId
+        properties:
+          title:
+            type: string
+          forUserId:
+            type: string
+          description:
             type: string

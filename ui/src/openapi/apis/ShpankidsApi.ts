@@ -17,6 +17,7 @@ import * as runtime from '../runtime';
 import type {
   ApiAssignment,
   ApiCreateFamilyTaskCommandArgs,
+  ApiCreateProblemSetCommandArgs,
   ApiCreateProblemsInSetCommandArgs,
   ApiDeleteFamilyTaskCommandArgs,
   ApiGenerateProblemsCommandArgs,
@@ -35,6 +36,8 @@ import {
     ApiAssignmentToJSON,
     ApiCreateFamilyTaskCommandArgsFromJSON,
     ApiCreateFamilyTaskCommandArgsToJSON,
+    ApiCreateProblemSetCommandArgsFromJSON,
+    ApiCreateProblemSetCommandArgsToJSON,
     ApiCreateProblemsInSetCommandArgsFromJSON,
     ApiCreateProblemsInSetCommandArgsToJSON,
     ApiDeleteFamilyTaskCommandArgsFromJSON,
@@ -63,6 +66,10 @@ import {
 
 export interface CreateFamilyTaskRequest {
     apiCreateFamilyTaskCommandArgs?: ApiCreateFamilyTaskCommandArgs;
+}
+
+export interface CreateProblemSetRequest {
+    apiCreateProblemSetCommandArgs?: ApiCreateProblemSetCommandArgs;
 }
 
 export interface CreateProblemsInSetRequest {
@@ -138,6 +145,34 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async createFamilyTask(requestParameters: CreateFamilyTaskRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.createFamilyTaskRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Create Problem Set
+     */
+    async createProblemSetRaw(requestParameters: CreateProblemSetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/create-problemset`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiCreateProblemSetCommandArgsToJSON(requestParameters['apiCreateProblemSetCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Create Problem Set
+     */
+    async createProblemSet(requestParameters: CreateProblemSetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.createProblemSetRaw(requestParameters, initOverrides);
     }
 
     /**

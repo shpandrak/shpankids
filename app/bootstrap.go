@@ -117,13 +117,13 @@ func appBootstrap(
 		}
 
 		problemSet1Id := "problemSet1"
-		err = familyManager.CreateFamilyProblemSet(
+		err = familyManager.CreateProblemSet(
 			bootstrapCtx,
 			shpanFamilyId,
 			peteUserId,
-			shpankids.FamilyProblemSetDto{
+			shpankids.CreateProblemSetDto{
 				ProblemSetId: problemSet1Id,
-				Title:        "שאלות מוזיקה",
+				Title:        "שאלות בתאוריה של המוזיקה",
 			},
 		)
 		if err != nil {
@@ -186,7 +186,7 @@ func appBootstrap(
 				},
 			},
 		}
-		err = familyManager.CreateFamilyProblemsInSet(
+		err = familyManager.CreateProblemsInSet(
 			bootstrapCtx,
 			shpanFamilyId,
 			peteUserId,
