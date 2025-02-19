@@ -67,6 +67,7 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
                     </tbody>
                 </table>
                 <button onClick={() => {
+                    setNewProblem(undefined);
                     const additionalText = window.prompt("Enter additional request text")
                     props.generateProblemsHandler(props.problemSet.id, props.userId, additionalText == null ? undefined : additionalText)
                         .then(problems => problems.map((problem) => new SelectableProblem(problem, false)))
