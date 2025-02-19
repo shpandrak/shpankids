@@ -206,7 +206,7 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 func toApiProblem(_ context.Context, p *shpankids.FamilyProblemDto) (*openapi.ApiProblem, error) {
 	mapAnswers, err := functional.MapSliceWithIdx(p.Answers, func(idx int, a shpankids.ProblemAnswerDto) (openapi.ApiProblemAnswer, error) {
 		return openapi.ApiProblemAnswer{
-			Id:    fmt.Sprintf("%d", idx),
+			Id:    a.Id,
 			Title: a.Title,
 		}, nil
 	})

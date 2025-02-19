@@ -85,7 +85,7 @@ func generateProblems(
 	}
 
 	strs, err := shpanstream.MapStreamWithError(
-		examples.Limit(5),
+		examples.Limit(10),
 		func(ctx context.Context, dto *shpankids.FamilyProblemDto) (*string, error) {
 			marshal, err := json.Marshal(dto)
 			if err != nil {
