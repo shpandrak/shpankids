@@ -105,4 +105,13 @@ type FamilyManager interface {
 		problemSetId string,
 		additionalRequestText string,
 	) shpanstream.Stream[openapi.ApiProblemForEdit]
+
+	SubmitProblemAnswer(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		problemId string,
+		answerId string,
+	) (bool, string, *FamilyProblemDto, error)
 }

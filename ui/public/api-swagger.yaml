@@ -67,6 +67,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiLoadProblemForAssignmentCommandResult'
 
+  /api/commands/submit-problem-answer:
+    post:
+      tags:
+        - shpankids
+      description: Submit problem answer
+      operationId: submitProblemAnswer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiSubmitProblemAnswerCommandArgs'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSubmitProblemAnswerCommandResp'
+
 
   /api/commands/generate-problems:
     post:
@@ -575,3 +594,30 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ApiProblemForEdit'
+
+    ApiSubmitProblemAnswerCommandArgs:
+        type: object
+        required:
+          - assignmentId
+          - problemId
+          - answerId
+        properties:
+          assignmentId:
+            type: string
+          problemId:
+            type: string
+          answerId:
+            type: string
+
+    ApiSubmitProblemAnswerCommandResp:
+        type: object
+        required:
+          - isCorrect
+          - correctAnswerId
+        properties:
+          isCorrect:
+            type: boolean
+          correctAnswerId:
+            type: string
+          explanation:
+            type: string

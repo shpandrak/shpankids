@@ -21,6 +21,32 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) SubmitProblemAnswer(
+	ctx context.Context,
+	request openapi.SubmitProblemAnswerRequestObject,
+) (openapi.SubmitProblemAnswerResponseObject, error) {
+	userId, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	isCorrect, correctAnswerId, problemDto, err := oa.familyManager.SubmitProblemAnswer(
+		ctx,
+		s.FamilyId,
+		userId,
+		request.Body.AssignmentId,
+		request.Body.ProblemId,
+		request.Body.AnswerId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.SubmitProblemAnswer200JSONResponse{
+		CorrectAnswerId: correctAnswerId,
+		Explanation:     castutil.StrToStrPtr(problemDto.Explanation),
+		IsCorrect:       isCorrect,
+	}, nil
+}
+
 func (oa *OapiServerApiImpl) CreateProblemsInSet(
 	ctx context.Context,
 	request openapi.CreateProblemsInSetRequestObject,

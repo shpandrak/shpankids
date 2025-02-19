@@ -226,6 +226,47 @@ func (m *Manager) CreateFamilyProblemsInSet(
 	return nil
 }
 
+func (m *Manager) SubmitProblemAnswer(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+	problemId string,
+	answerId string,
+) (bool, string, *shpankids.FamilyProblemDto, error) {
+	p, err := m.getProblem(ctx, familyId, userId, problemSetId, problemId)
+	if err != nil {
+		return false, "", nil, err
+	}
+	correctAnswer := functional.FindFirst(p.Answers, func(a shpankids.ProblemAnswerDto) bool {
+		return a.Correct
+	})
+	if correctAnswer == nil {
+		return false, "", nil, fmt.Errorf("no correct answer found for problem %s", problemId)
+	}
+	return answerId == correctAnswer.Id, correctAnswer.Id, p, nil
+
+}
+
+func (m *Manager) getProblem(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+	problemId string,
+) (*shpankids.FamilyProblemDto, error) {
+	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
+	if err != nil {
+		return nil, err
+	}
+	// Find the problems in repo
+	dbProblem, err := repo.Get(ctx, problemId)
+	if err != nil {
+		return nil, err
+	}
+	return mapFamilyProblemDbToDto(&functional.Entry[string, dbFamilyProblem]{Key: problemId, Value: dbProblem}), nil
+}
+
 func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
 	repo, err := newFamilyTaskRepository(ctx, m.kvs, familyId)
 	if err != nil {

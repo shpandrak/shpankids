@@ -24,6 +24,8 @@ import type {
   ApiLoadProblemForAssignmentCommandResult,
   ApiProblemForEdit,
   ApiProblemSet,
+  ApiSubmitProblemAnswerCommandArgs,
+  ApiSubmitProblemAnswerCommandResp,
   ApiTaskStats,
   ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
@@ -47,6 +49,10 @@ import {
     ApiProblemForEditToJSON,
     ApiProblemSetFromJSON,
     ApiProblemSetToJSON,
+    ApiSubmitProblemAnswerCommandArgsFromJSON,
+    ApiSubmitProblemAnswerCommandArgsToJSON,
+    ApiSubmitProblemAnswerCommandRespFromJSON,
+    ApiSubmitProblemAnswerCommandRespToJSON,
     ApiTaskStatsFromJSON,
     ApiTaskStatsToJSON,
     ApiUpdateFamilyTaskCommandArgsFromJSON,
@@ -87,6 +93,10 @@ export interface ListUserFamilyProblemSetsRequest {
 
 export interface LoadProblemForAssignmentRequest {
     apiLoadProblemForAssignmentCommandArgs?: ApiLoadProblemForAssignmentCommandArgs;
+}
+
+export interface SubmitProblemAnswerRequest {
+    apiSubmitProblemAnswerCommandArgs?: ApiSubmitProblemAnswerCommandArgs;
 }
 
 export interface UpdateFamilyTaskRequest {
@@ -382,6 +392,35 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async loadProblemForAssignment(requestParameters: LoadProblemForAssignmentRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiLoadProblemForAssignmentCommandResult> {
         const response = await this.loadProblemForAssignmentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Submit problem answer
+     */
+    async submitProblemAnswerRaw(requestParameters: SubmitProblemAnswerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ApiSubmitProblemAnswerCommandResp>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/submit-problem-answer`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiSubmitProblemAnswerCommandArgsToJSON(requestParameters['apiSubmitProblemAnswerCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ApiSubmitProblemAnswerCommandRespFromJSON(jsonValue));
+    }
+
+    /**
+     * Submit problem answer
+     */
+    async submitProblemAnswer(requestParameters: SubmitProblemAnswerRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiSubmitProblemAnswerCommandResp> {
+        const response = await this.submitProblemAnswerRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

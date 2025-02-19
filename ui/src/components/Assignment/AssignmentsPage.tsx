@@ -85,7 +85,40 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
                                 })
                                     .then((p) => {
                                         props.uiCtx.showModal((
-                                            <ProblemComponent uiCtx={props.uiCtx} problem={p.problem}/>))
+                                            <ProblemComponent
+                                                uiCtx={props.uiCtx}
+                                                problem={p.problem}
+                                                submitAnswer={(answerId: string) => {
+                                                    shpanKidsApi.submitProblemAnswer({
+                                                        apiSubmitProblemAnswerCommandArgs: {
+                                                            assignmentId: assignment.id,
+                                                            answerId: answerId,
+                                                            problemId: p.problem.id,
+                                                        }
+                                                    })
+                                                        .then((res) => {
+                                                            if (res.isCorrect) {
+                                                                alert("That is Correct!");
+                                                            } else {
+                                                                const correctRes = p.problem.answers.find((a) => a.id === res.correctAnswerId);
+                                                                if (correctRes) {
+                                                                    let msg = "That is not correct. The correct answer is: " + correctRes.title
+                                                                    if (res.explanation) {
+                                                                        msg += "\n" + res.explanation!;
+                                                                    }
+                                                                    alert(msg);
+                                                                } else {
+                                                                    alert("That is not correct, not sure what is the correct answer");
+                                                                }
+
+
+                                                            }
+                                                        })
+                                                    .catch(showError)
+
+                                                    props.uiCtx.hideModal();
+                                                }}
+                                            />))
                                     })
                                     .catch(showError);
 
