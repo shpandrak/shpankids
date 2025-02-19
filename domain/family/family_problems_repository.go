@@ -69,17 +69,16 @@ type dbFamilyProblemSet struct {
 }
 
 type dbFamilyProblem struct {
-	Title        string                 `json:"title"`
-	Description  string                 `json:"description"`
-	Created      time.Time              `json:"created"`
-	Hints        []string               `json:"hints,omitempty"`
-	Explanation  string                 `json:"explanation,omitempty"`
-	Alternatives []dbProblemAlternative `json:"alternatives"`
+	Title       string                     `json:"title"`
+	Description string                     `json:"description"`
+	Created     time.Time                  `json:"created"`
+	Hints       []string                   `json:"hints,omitempty"`
+	Explanation string                     `json:"explanation,omitempty"`
+	Answers     map[string]dbProblemAnswer `json:"answers"`
 }
 
-type dbProblemAlternative struct {
-	Id          string `json:"id"`
+type dbProblemAnswer struct {
 	Title       string `json:"title"`
-	Description string `json:"description"`
-	Correct     bool   `json:"correct"`
+	Description string `json:"description,omitempty"`
+	Correct     bool   `json:"correct,omitempty"`
 }

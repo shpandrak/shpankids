@@ -21,19 +21,65 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) CreateProblemsInSet(
+	ctx context.Context,
+	request openapi.CreateProblemsInSetRequestObject,
+) (openapi.CreateProblemsInSetResponseObject, error) {
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = oa.familyManager.CreateFamilyProblemsInSet(
+		ctx,
+		s.FamilyId,
+		request.Body.ForUserId,
+		request.Body.ProblemSetId,
+		functional.MapSliceNoErr(request.Body.Problems, toCreateFamilyProblemDto),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.CreateProblemsInSet200Response{}, nil
+
+}
+
+func toCreateFamilyProblemDto(p openapi.ApiProblemForEdit) shpankids.CreateProblemDto {
+	return shpankids.CreateProblemDto{
+		Description: castutil.StrPtrToStr(p.Description),
+		Title:       p.Title,
+		Answers:     functional.MapSliceNoErr(p.Answers, toCreateProblemAnswerDto),
+	}
+}
+
+func toCreateProblemAnswerDto(a openapi.ApiProblemAnswerForEdit) shpankids.CreateProblemAnswerDto {
+	return shpankids.CreateProblemAnswerDto{
+		Description: castutil.StrPtrToStr(a.Description),
+		Title:       a.Title,
+		Correct:     a.IsCorrect,
+	}
+}
+
+func (oa *OapiServerApiImpl) getUserAndSession(ctx context.Context) (string, *shpankids.Session, error) {
+	// todo:add put session in context, avoid accessing multiple times
+	userId, err := oa.userSessionManager(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+	s, err := oa.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return "", nil, err
+	}
+	return *userId, s, nil
+}
+
 func (oa *OapiServerApiImpl) GenerateProblems(
 	ctx context.Context,
 	request openapi.GenerateProblemsRequestObject,
 ) (openapi.GenerateProblemsResponseObject, error) {
-	userId, err := oa.userSessionManager(ctx)
+	_, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}
-	s, err := oa.sessionManager.Get(ctx, *userId)
-	if err != nil {
-		return nil, err
-	}
-
 	return &streamingProblemsForEdit{
 		ctx: ctx,
 		stream: oa.familyManager.GenerateNewProblems(
@@ -51,15 +97,10 @@ func (oa *OapiServerApiImpl) ListProblemSetProblems(
 	ctx context.Context,
 	request openapi.ListProblemSetProblemsRequestObject,
 ) (openapi.ListProblemSetProblemsResponseObject, error) {
-	userId, err := oa.userSessionManager(ctx)
+	_, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}
-	s, err := oa.sessionManager.Get(ctx, *userId)
-	if err != nil {
-		return nil, err
-	}
-
 	return &streamingProblemsForEdit{
 		ctx: ctx,
 		stream: shpanstream.MapStream(
@@ -74,11 +115,11 @@ func ToApiProblemForEdit(p *shpankids.FamilyProblemDto) *openapi.ApiProblemForEd
 		Description: castutil.StrToStrPtr(p.Description),
 		Id:          functional.ValueToPointer(p.ProblemId),
 		Title:       p.Title,
-		Answers:     functional.MapSliceNoErr(p.Alternatives, toApiProblemAnswerForEdit),
+		Answers:     functional.MapSliceNoErr(p.Answers, toApiProblemAnswerForEdit),
 	}
 
 }
-func toApiProblemAnswerForEdit(a shpankids.ProblemAlternativeDto) openapi.ApiProblemAnswerForEdit {
+func toApiProblemAnswerForEdit(a shpankids.ProblemAnswerDto) openapi.ApiProblemAnswerForEdit {
 	return openapi.ApiProblemAnswerForEdit{
 		Description: castutil.StrToStrPtr(a.Description),
 		Id:          functional.ValueToPointer(a.Id),
@@ -91,15 +132,10 @@ func (oa *OapiServerApiImpl) ListUserFamilyProblemSets(
 	ctx context.Context,
 	request openapi.ListUserFamilyProblemSetsRequestObject,
 ) (openapi.ListUserFamilyProblemSetsResponseObject, error) {
-	userId, err := oa.userSessionManager(ctx)
+	_, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}
-	s, err := oa.sessionManager.Get(ctx, *userId)
-	if err != nil {
-		return nil, err
-	}
-
 	return &streamingProblemSets{
 		stream: shpanstream.MapStream(
 			oa.familyManager.ListFamilyProblemSetsForUser(ctx, s.FamilyId, request.Params.UserId),
@@ -120,17 +156,13 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 	ctx context.Context,
 	request openapi.LoadProblemForAssignmentRequestObject,
 ) (openapi.LoadProblemForAssignmentResponseObject, error) {
-	userId, err := oa.userSessionManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-	s, err := oa.sessionManager.Get(ctx, *userId)
+	userId, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	first, err := shpanstream.MapStreamWithError(
-		oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, *userId, request.Body.AssignmentId),
+		oa.familyManager.ListFamilyProblemsForUser(ctx, s.FamilyId, userId, request.Body.AssignmentId),
 		toApiProblem,
 	).FindFirst(ctx)
 	if err != nil {
@@ -146,7 +178,7 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 }
 
 func toApiProblem(_ context.Context, p *shpankids.FamilyProblemDto) (*openapi.ApiProblem, error) {
-	mapAnswers, err := functional.MapSliceWithIdx(p.Alternatives, func(idx int, a shpankids.ProblemAlternativeDto) (openapi.ApiProblemAnswer, error) {
+	mapAnswers, err := functional.MapSliceWithIdx(p.Answers, func(idx int, a shpankids.ProblemAnswerDto) (openapi.ApiProblemAnswer, error) {
 		return openapi.ApiProblemAnswer{
 			Id:    fmt.Sprintf("%d", idx),
 			Title: a.Title,
@@ -171,13 +203,7 @@ func (oa *OapiServerApiImpl) GetStats(
 	from := *datekvs.NewDateFromTime(time.Now())
 	to := from
 
-	userId, err := oa.userSessionManager(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// todo:add put session in context, avoid accessing multiple times
-	s, err := oa.sessionManager.Get(ctx, *userId)
+	_, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}

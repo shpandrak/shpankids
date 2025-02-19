@@ -130,11 +130,10 @@ func appBootstrap(
 			return err
 		}
 
-		problemsPack := []shpankids.FamilyProblemDto{
+		problemsPack := []shpankids.CreateProblemDto{
 			{
-				ProblemId: "problem1",
-				Title:     "מהם הצלילים באקורד רה מינור?",
-				Alternatives: []shpankids.ProblemAlternativeDto{
+				Title: "מהם הצלילים באקורד רה מינור?",
+				Answers: []shpankids.CreateProblemAnswerDto{
 					{
 						Title: "רה-סול-דו",
 					},
@@ -151,9 +150,8 @@ func appBootstrap(
 				},
 			},
 			{
-				ProblemId: "problem2",
-				Title:     "מהו הצליל השישי בסולם דו מז׳ור?",
-				Alternatives: []shpankids.ProblemAlternativeDto{
+				Title: "מהו הצליל השישי בסולם דו מז׳ור?",
+				Answers: []shpankids.CreateProblemAnswerDto{
 					{
 						Title: "רה",
 					},
@@ -169,12 +167,34 @@ func appBootstrap(
 					},
 				},
 			},
+			{
+				Title: "באיזה סולם מא׳זורי יש שני דיאזים",
+				Answers: []shpankids.CreateProblemAnswerDto{
+					{
+						Title:   "רה",
+						Correct: true,
+					},
+					{
+						Title: "פה דיאז",
+					},
+					{
+						Title: "לה",
+					},
+					{
+						Title: "מי",
+					},
+				},
+			},
 		}
-		for _, currProblem := range problemsPack {
-			err = familyManager.CreateFamilyProblem(bootstrapCtx, shpanFamilyId, peteUserId, problemSet1Id, currProblem)
-			if err != nil {
-				return err
-			}
+		err = familyManager.CreateFamilyProblemsInSet(
+			bootstrapCtx,
+			shpanFamilyId,
+			peteUserId,
+			problemSet1Id,
+			problemsPack,
+		)
+		if err != nil {
+			return err
 		}
 
 	}

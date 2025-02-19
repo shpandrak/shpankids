@@ -62,12 +62,16 @@ func Start(
 		familyManager,
 		sessionManager,
 	)
-	withStrictHandler := openapi.NewStrictHandlerWithOptions(apiImpl, nil, openapi.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+	withStrictHandler := openapi.NewStrictHandlerWithOptions(
+		apiImpl,
+		nil,
+		openapi.StrictHTTPServerOptions{
+			RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			},
+			ResponseErrorHandlerFunc: api.HandleErrors,
 		},
-		ResponseErrorHandlerFunc: api.HandleErrors,
-	})
+	)
 	openapi.HandlerWithOptions(
 		withStrictHandler,
 		openapi.GorillaServerOptions{
