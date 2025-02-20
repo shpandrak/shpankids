@@ -124,7 +124,7 @@ func (m *managerImpl) filterProblemAssignmentsForUser(
 	familyId string,
 	userId string,
 ) shpanstream.Stream[shpankids.Assignment] {
-	return shpanstream.MapStreamWithError(
+	return shpanstream.MapStreamWhileFilteringWithError(
 		m.familyManager.ListProblemSetsForUser(
 			ctx,
 			familyId,
@@ -155,8 +155,19 @@ func (m *managerImpl) mapProblemSetToAssignment(
 	}
 
 	status := shpankids.StatusOpen
+	// If there are any solutions for the problem set, the status is set to done
 	if count > 0 {
 		status = shpankids.StatusDone
+	} else {
+		// Checking if there are no available problems for the problem set we're also done...
+		first, err := m.familyManager.ListProblemsForProblemSet(ctx, familyId, userId, fps.ProblemSetId).FindFirst(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if first.IsEmpty() {
+			// returning nil to filter away this assignment, no problems available...
+			return nil, nil
+		}
 	}
 	return &shpankids.Assignment{
 		Id:          fps.ProblemSetId,
