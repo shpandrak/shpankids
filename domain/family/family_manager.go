@@ -421,7 +421,7 @@ func (m *Manager) ListProblemsForProblemSet(
 		return shpanstream.NewErrorStream[shpankids.FamilyProblemDto](err)
 	}
 	// Find the problems in repo
-	return shpanstream.MapStream(repo.Stream(ctx), mapFamilyProblemDbToDto)
+	return shpanstream.MapStream(repo.StreamIncludingArchived(ctx), mapFamilyProblemDbToDto)
 
 }
 
