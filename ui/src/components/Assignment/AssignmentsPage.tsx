@@ -14,12 +14,16 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
     const [assignments, setAssignments] = React.useState<ApiAssignment[]>([]);
     const [loading, setLoading] = React.useState(true);
 
-    React.useEffect(() => {
+    function reloadAssignments() {
         shpanKidsApi.listAssignments()
             .then(assignments => assignments.sort((a, b) => a.id.localeCompare(b.id)))
             .then(setAssignments)
             .then(() => setLoading(false))
             .catch(showError);
+    }
+
+    React.useEffect(() => {
+        reloadAssignments();
 
     }, [props.uiCtx]);
 
@@ -75,7 +79,7 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
                             }}>Undo
                             </button>
                         )}
-                        {assignment.type == "problemSet" && assignment.status == "open" && (
+                        {assignment.type == "problemSet" && (
                             <button onClick={() => {
                                 shpanKidsApi.loadProblemForAssignment({
                                     apiLoadProblemForAssignmentCommandArgs: {
@@ -112,15 +116,19 @@ const AssignmentsPage: React.FC<AssignmentsPageProps> = (props) => {
                                                                 }
                                                             }
                                                         })
-                                                    .catch(showError)
+                                                        .then(() => reloadAssignments())
+                                                        .catch(showError)
+                                                        .finally(() => {
+                                                            props.uiCtx.hideModal();
+                                                        });
 
-                                                    props.uiCtx.hideModal();
+
                                                 }}
                                             />))
                                     })
                                     .catch(showError);
 
-                            }}>Load Problem
+                            }}>{assignment.status == "open" ? "Solve problem" : "Another one for fun"}
                             </button>
                         )}
                     </li>
