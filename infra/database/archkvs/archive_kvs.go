@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"shpankids/infra/database/kvstore"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 )
 
@@ -14,6 +15,9 @@ type ArchivedKvs[K comparable, V any] interface {
 	UnArchive(ctx context.Context, key K) error
 	GetIncludingArchived(ctx context.Context, key K) (V, error)
 	FindIncludingArchived(ctx context.Context, key K) (*V, error)
+
+	StreamIncludingArchived(ctx context.Context) shpanstream.Stream[functional.Entry[K, V]]
+	StreamArchived(ctx context.Context) shpanstream.Stream[functional.Entry[K, V]]
 }
 
 type ArchivedKvsImpl[K comparable, V any] struct {
@@ -58,6 +62,14 @@ func (a ArchivedKvsImpl[K, V]) Archive(ctx context.Context, key K) error {
 		return err
 	}
 	return nil
+}
+
+func (a ArchivedKvsImpl[K, V]) StreamIncludingArchived(ctx context.Context) shpanstream.Stream[functional.Entry[K, V]] {
+	return shpanstream.ConcatenatedStream(a.Stream(ctx), a.archivedStore.Stream(ctx))
+}
+
+func (a ArchivedKvsImpl[K, V]) StreamArchived(ctx context.Context) shpanstream.Stream[functional.Entry[K, V]] {
+	return a.archivedStore.Stream(ctx)
 }
 
 func (a ArchivedKvsImpl[K, V]) UnArchive(ctx context.Context, key K) error {
