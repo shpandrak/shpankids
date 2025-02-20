@@ -2,6 +2,7 @@ package shpankids
 
 import (
 	"context"
+	"shpankids/infra/database/datekvs"
 	"shpankids/infra/shpanstream"
 	"shpankids/openapi"
 	"time"
@@ -77,6 +78,12 @@ type FamilyProblemSetDto struct {
 	StatusDate   time.Time
 }
 
+type ProblemSolutionDto struct {
+	ProblemId        string
+	Correct          bool
+	SelectedAnswerId string
+}
+
 type CreateProblemSetDto struct {
 	ProblemSetId string
 	Title        string
@@ -118,6 +125,15 @@ type FamilyManager interface {
 		userId string,
 		problemSetId string,
 		problemId string,
+		forDate datekvs.Date,
 		answerId string,
 	) (bool, string, *FamilyProblemDto, error)
+
+	ListProblemSetSolutionsForDate(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		forDate datekvs.Date,
+	) shpanstream.Stream[ProblemSolutionDto]
 }

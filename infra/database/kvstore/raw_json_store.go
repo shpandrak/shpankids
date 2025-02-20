@@ -32,4 +32,6 @@ type RawJsonStore interface {
 	StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]]
 
 	StreamAllNamespaces(ctx context.Context) shpanstream.Stream[string]
+
+	//RunInTx(ctx context.Context, f func(ctx context.Context, tx RawJsonStore) error) error
 }

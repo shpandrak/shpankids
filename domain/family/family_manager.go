@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
@@ -136,7 +137,7 @@ func (m *Manager) CreateProblemSet(ctx context.Context, familyId string, forUser
 	return psRepo.Set(
 		ctx,
 		familyProblemSet.ProblemSetId,
-		dbFamilyProblemSet{
+		dbProblemSet{
 			Title:       familyProblemSet.Title,
 			Description: familyProblemSet.Description,
 			Created:     createTime,
@@ -211,7 +212,7 @@ func (m *Manager) CreateProblemsInSet(
 		}
 
 		// Create the family task in repo
-		err = repo.Set(ctx, uuid.NewString(), dbFamilyProblem{
+		err = repo.Set(ctx, uuid.NewString(), dbProblem{
 			Title:       p.Title,
 			Description: p.Description,
 			Created:     createdTime,
@@ -232,19 +233,48 @@ func (m *Manager) SubmitProblemAnswer(
 	userId string,
 	problemSetId string,
 	problemId string,
+	forDate datekvs.Date,
 	answerId string,
 ) (bool, string, *shpankids.FamilyProblemDto, error) {
-	p, err := m.getProblem(ctx, familyId, userId, problemSetId, problemId)
+
+	pRepo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
 	if err != nil {
 		return false, "", nil, err
 	}
-	correctAnswer := functional.FindFirst(p.Answers, func(a shpankids.ProblemAnswerDto) bool {
+	// Find the problems in repo
+	dbP, err := pRepo.Get(ctx, problemId)
+	if err != nil {
+		return false, "", nil, err
+	}
+
+	correctAnswerId := functional.FindKeyInMap(dbP.Answers, func(a *dbProblemAnswer) bool {
 		return a.Correct
 	})
-	if correctAnswer == nil {
+	if correctAnswerId == nil {
 		return false, "", nil, fmt.Errorf("no correct answer found for problem %s", problemId)
 	}
-	return answerId == correctAnswer.Id, correctAnswer.Id, p, nil
+
+	solRepo, err := newFamilyProblemsSolutionsRepository(ctx, m.kvs, familyId, userId, problemSetId)
+	if err != nil {
+		return false, "", nil, err
+	}
+	dbPs := dbProblemSolution{
+		SelectedAnswerId: answerId,
+		Correct:          answerId == *correctAnswerId,
+	}
+	err = solRepo.Set(ctx, forDate, problemId, dbPs)
+	if err != nil {
+		return false, "", nil, err
+	}
+	// todo:amit:tx?
+	err = pRepo.Archive(ctx, problemId)
+	if err != nil {
+		return false, "", nil, err
+	}
+
+	return dbPs.Correct, *correctAnswerId, mapFamilyProblemDbToDto(
+		&functional.Entry[string, dbProblem]{Key: problemId, Value: dbP},
+	), nil
 
 }
 
@@ -255,16 +285,16 @@ func (m *Manager) getProblem(
 	problemSetId string,
 	problemId string,
 ) (*shpankids.FamilyProblemDto, error) {
-	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
+	pRepo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
 	if err != nil {
 		return nil, err
 	}
 	// Find the problems in repo
-	dbProblem, err := repo.Get(ctx, problemId)
+	dbP, err := pRepo.Get(ctx, problemId)
 	if err != nil {
 		return nil, err
 	}
-	return mapFamilyProblemDbToDto(&functional.Entry[string, dbFamilyProblem]{Key: problemId, Value: dbProblem}), nil
+	return mapFamilyProblemDbToDto(&functional.Entry[string, dbProblem]{Key: problemId, Value: dbP}), nil
 }
 
 func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
@@ -395,7 +425,7 @@ func (m *Manager) ListProblemsForProblemSet(
 
 }
 
-func mapFamilyProblemDbToDto(e *functional.Entry[string, dbFamilyProblem]) *shpankids.FamilyProblemDto {
+func mapFamilyProblemDbToDto(e *functional.Entry[string, dbProblem]) *shpankids.FamilyProblemDto {
 	return &shpankids.FamilyProblemDto{
 		ProblemId:   e.Key,
 		Title:       e.Value.Title,
@@ -407,7 +437,7 @@ func mapFamilyProblemDbToDto(e *functional.Entry[string, dbFamilyProblem]) *shpa
 	}
 }
 
-func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbFamilyProblemSet]) *shpankids.FamilyProblemSetDto {
+func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbProblemSet]) *shpankids.FamilyProblemSetDto {
 	return &shpankids.FamilyProblemSetDto{
 		ProblemSetId: e.Key,
 		Title:        e.Value.Title,
@@ -429,14 +459,14 @@ func (m *Manager) GenerateNewProblems(
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
-	dbProblemSet, err := psRepo.Get(ctx, problemSetId)
+	dbPs, err := psRepo.Get(ctx, problemSetId)
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
 	return generateProblems(
 		ctx,
 		userId,
-		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbFamilyProblemSet]{Key: problemSetId, Value: dbProblemSet}),
+		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbProblemSet]{Key: problemSetId, Value: dbPs}),
 		m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId),
 		additionalRequestText,
 	)
@@ -448,4 +478,24 @@ func mapFamilyProblemAlternativeDbToDto(problemId string, a dbProblemAnswer) shp
 		Description: a.Description,
 		Correct:     a.Correct,
 	}
+}
+
+func (m *Manager) ListProblemSetSolutionsForDate(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+	forDate datekvs.Date,
+) shpanstream.Stream[shpankids.ProblemSolutionDto] {
+	sr, err := newFamilyProblemsSolutionsRepository(ctx, m.kvs, familyId, userId, problemSetId)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.ProblemSolutionDto](err)
+	}
+	return shpanstream.MapStream(sr.GetAllForDate(ctx, forDate), func(e *functional.Entry[string, dbProblemSolution]) *shpankids.ProblemSolutionDto {
+		return &shpankids.ProblemSolutionDto{
+			ProblemId:        e.Key,
+			SelectedAnswerId: e.Value.SelectedAnswerId,
+			Correct:          e.Value.Correct,
+		}
+	})
 }

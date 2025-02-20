@@ -111,24 +111,61 @@ func (m *managerImpl) doListAssignments(
 		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
-	//todo:amit:just return a stream from here...
+	// Combine different types of assignments into a single stream
 	return shpanstream.ConcatenatedStream(
 		m.filterTaskAssignmentsForUser(ctx, forDate, familyTasks, userId),
-		shpanstream.MapStream(m.familyManager.ListProblemSetsForUser(ctx, familyId, userId), func(fps *shpankids.FamilyProblemSetDto) *shpankids.Assignment {
-			return mapProblemSetToAssignment(fps, forDate)
-		},
-		))
+		m.filterProblemAssignmentsForUser(ctx, forDate, familyId, userId),
+	)
 }
 
-func mapProblemSetToAssignment(fps *shpankids.FamilyProblemSetDto, forDate datekvs.Date) *shpankids.Assignment {
+func (m *managerImpl) filterProblemAssignmentsForUser(
+	ctx context.Context,
+	forDate datekvs.Date,
+	familyId string,
+	userId string,
+) shpanstream.Stream[shpankids.Assignment] {
+	return shpanstream.MapStreamWithError(
+		m.familyManager.ListProblemSetsForUser(
+			ctx,
+			familyId,
+			userId,
+		),
+		func(ctx context.Context, fps *shpankids.FamilyProblemSetDto) (*shpankids.Assignment, error) {
+			return m.mapProblemSetToAssignment(ctx, familyId, userId, fps, forDate)
+		},
+	)
+}
+
+func (m *managerImpl) mapProblemSetToAssignment(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	fps *shpankids.FamilyProblemSetDto,
+	forDate datekvs.Date,
+) (*shpankids.Assignment, error) {
+	count, err := m.familyManager.ListProblemSetSolutionsForDate(
+		ctx,
+		familyId,
+		userId,
+		fps.ProblemSetId,
+		forDate,
+	).Count(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	status := shpankids.StatusOpen
+	if count > 0 {
+		status = shpankids.StatusDone
+	}
 	return &shpankids.Assignment{
 		Id:          fps.ProblemSetId,
 		ForDate:     forDate,
 		Type:        shpankids.AssignmentTypeProblemSet,
 		Title:       fps.Title,
-		Status:      shpankids.StatusOpen,
+		Status:      status,
 		Description: fps.Description,
-	}
+	}, nil
 }
 
 func (m *managerImpl) filterTaskAssignmentsForUser(
@@ -169,12 +206,15 @@ func (m *managerImpl) filterTaskAssignmentsForUser(
 		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
-	err = userTaskRepo.GetAllForDate(ctx, forDate).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
-		foundTask, found := assignmentsById[dr.Key]
-		if found {
-			foundTask.Status = dr.Value.Status
-		}
-	})
+	err = userTaskRepo.GetAllForDate(ctx, forDate).Consume(
+		ctx,
+		func(dr *functional.Entry[string, dbUserTaskStatus]) {
+			foundTask, found := assignmentsById[dr.Key]
+			if found {
+				foundTask.Status = dr.Value.Status
+			}
+		},
+	)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
