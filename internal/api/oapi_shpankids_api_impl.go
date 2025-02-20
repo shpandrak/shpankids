@@ -35,6 +35,7 @@ func (oa *OapiServerApiImpl) SubmitProblemAnswer(
 		userId,
 		request.Body.AssignmentId,
 		request.Body.ProblemId,
+		datekvs.TodayDate(s.Location),
 		request.Body.AnswerId,
 	)
 	if err != nil {

@@ -30,6 +30,24 @@ func FindFirst[A any](input []A, m func(A) bool) *A {
 	return nil
 }
 
+func FindInMap[K comparable, V any](input map[K]V, m func(V) bool) (*K, *V) {
+	for currKey, currElem := range input {
+		if m(currElem) {
+			return &currKey, &currElem
+		}
+	}
+	return nil, nil
+}
+
+func FindKeyInMap[K comparable, V any](input map[K]V, m func(*V) bool) *K {
+	for currKey, currElem := range input {
+		if m(&currElem) {
+			return &currKey
+		}
+	}
+	return nil
+}
+
 // MapSliceWhileFiltering maps a slice of A to a slice of B, while filtering out nil values
 func MapSliceWhileFiltering[A any, B any](input []A, m MapFunc[A, *B]) ([]B, error) {
 	var ret []B

@@ -52,8 +52,10 @@ type Stream[T any] interface {
 	FilterWithError(predicate func(context.Context, *T) (bool, error)) Stream[T]
 	Filter(predicate func(*T) bool) Stream[T]
 	Limit(limit int) Stream[T]
+
 	Skip(limit int) Stream[T]
 
+	Count(ctx context.Context) (int, error)
 	FindFirst(ctx context.Context) (Optional[T], error)
 	GetFirst(ctx context.Context) (*T, error)
 	FindLast(ctx context.Context) (Optional[T], error)
@@ -330,4 +332,16 @@ func (s *stream[T]) Skip(skip int) Stream[T] {
 func (s *stream[T]) SubscribeOnStreamLifecycle(lch StreamLifecycle) Stream[T] {
 	s.allLifecycleElement = append(s.allLifecycleElement, lch)
 	return s
+}
+
+func (s *stream[T]) Count(ctx context.Context) (int, error) {
+
+	count := 0
+	err := s.Consume(ctx, func(v *T) {
+		count++
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

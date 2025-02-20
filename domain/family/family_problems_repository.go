@@ -3,6 +3,7 @@ package family
 import (
 	"context"
 	"shpankids/infra/database/archkvs"
+	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
 	"shpankids/shpankids"
 	"time"
@@ -10,7 +11,31 @@ import (
 
 const problemSetsRepoUri = "problemSets"
 
-type problemsRepository archkvs.ArchivedKvs[string, dbFamilyProblem]
+type problemsRepository archkvs.ArchivedKvs[string, dbProblem]
+type problemSetsRepository kvstore.JsonKvStore[string, dbProblemSet]
+type problemSolutionsRepository datekvs.DateKvStore[dbProblemSolution]
+
+func newFamilyProblemsSolutionsRepository(
+	ctx context.Context,
+	kvs kvstore.RawJsonStore,
+	familyId string,
+	userId string,
+	problemSetId string,
+) (problemSolutionsRepository, error) {
+	familyProblemsStore, err := kvs.CreateSpaceStore(ctx, []string{
+		familiesSpaceStoreUri,
+		familyId,
+		"users",
+		userId,
+		problemSetsRepoUri,
+		problemSetId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return datekvs.NewDateKvsImpl[dbProblemSolution](familyProblemsStore), nil
+}
 
 func newFamilyProblemsRepository(ctx context.Context, kvs kvstore.RawJsonStore, familyId string, userId string, problemSetId string) (problemsRepository, error) {
 	familyProblemsStore, err := kvs.CreateSpaceStore(ctx, []string{
@@ -25,7 +50,7 @@ func newFamilyProblemsRepository(ctx context.Context, kvs kvstore.RawJsonStore, 
 		return nil, err
 	}
 
-	return archkvs.NewArchivedKvsImpl[string, dbFamilyProblem](
+	return archkvs.NewArchivedKvsImpl[string, dbProblem](
 		ctx,
 		familyProblemsStore,
 		"problems",
@@ -33,8 +58,6 @@ func newFamilyProblemsRepository(ctx context.Context, kvs kvstore.RawJsonStore, 
 		kvstore.StringToKey,
 	)
 }
-
-type problemSetsRepository kvstore.JsonKvStore[string, dbFamilyProblemSet]
 
 func newProblemSetsRepository(
 	ctx context.Context,
@@ -52,7 +75,7 @@ func newProblemSetsRepository(
 		return nil, err
 	}
 
-	return kvstore.NewJsonKvStoreImpl[string, dbFamilyProblemSet](
+	return kvstore.NewJsonKvStoreImpl[string, dbProblemSet](
 		familyProblemsStore,
 		problemSetsRepoUri,
 		kvstore.StringKeyToString,
@@ -60,7 +83,7 @@ func newProblemSetsRepository(
 	), nil
 }
 
-type dbFamilyProblemSet struct {
+type dbProblemSet struct {
 	Title       string                           `json:"title"`
 	Description string                           `json:"description"`
 	Created     time.Time                        `json:"created"`
@@ -68,7 +91,7 @@ type dbFamilyProblemSet struct {
 	StatusDate  time.Time                        `json:"statusDate"`
 }
 
-type dbFamilyProblem struct {
+type dbProblem struct {
 	Title       string                     `json:"title"`
 	Description string                     `json:"description"`
 	Created     time.Time                  `json:"created"`
@@ -81,4 +104,9 @@ type dbProblemAnswer struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
 	Correct     bool   `json:"correct,omitempty"`
+}
+
+type dbProblemSolution struct {
+	SelectedAnswerId string `json:"selectedAnswerId"`
+	Correct          bool   `json:"correct"`
 }
