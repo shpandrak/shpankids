@@ -160,7 +160,13 @@ func (m *managerImpl) mapProblemSetToAssignment(
 		status = shpankids.StatusDone
 	} else {
 		// Checking if there are no available problems for the problem set we're also done...
-		first, err := m.familyManager.ListProblemsForProblemSet(ctx, familyId, userId, fps.ProblemSetId).FindFirst(ctx)
+		first, err := m.familyManager.ListProblemsForProblemSet(
+			ctx,
+			familyId,
+			userId,
+			fps.ProblemSetId,
+			false,
+		).FindFirst(ctx)
 		if err != nil {
 			return nil, err
 		}

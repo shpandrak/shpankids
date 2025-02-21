@@ -26,3 +26,4 @@ export * from './UIFamilyInfo';
 export * from './UIFamilyMember';
 export * from './UIFamilyTask';
 export * from './UIUserInfo';
+export * from './UIUserRole';

@@ -291,21 +291,23 @@ components:
       description: User Info
       required:
         - email
-        - familyDisplayName
-        - familyUri
+        - role
       properties:
         email:
           type: string
           format: email
-        familyDisplayName:
-          type: string
-        familyUri:
-          type: string
+        role:
+          $ref: '#/components/schemas/UIUserRole'
         firstName:
           type: string
         lastName:
           type: string
-
+    UIUserRole:
+        type: string
+        enum:
+            - familyAdmin
+            - familyMember
+            - guest
     UIFamilyInfo:
       type: object
       description: Family info

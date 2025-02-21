@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { UIUserRole } from './UIUserRole';
+import {
+    UIUserRoleFromJSON,
+    UIUserRoleFromJSONTyped,
+    UIUserRoleToJSON,
+} from './UIUserRole';
+
 /**
  * User Info
  * @export
@@ -27,16 +34,10 @@ export interface UIUserInfo {
     email: string;
     /**
      * 
-     * @type {string}
+     * @type {UIUserRole}
      * @memberof UIUserInfo
      */
-    familyDisplayName: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof UIUserInfo
-     */
-    familyUri: string;
+    role: UIUserRole;
     /**
      * 
      * @type {string}
@@ -56,8 +57,7 @@ export interface UIUserInfo {
  */
 export function instanceOfUIUserInfo(value: object): boolean {
     if (!('email' in value)) return false;
-    if (!('familyDisplayName' in value)) return false;
-    if (!('familyUri' in value)) return false;
+    if (!('role' in value)) return false;
     return true;
 }
 
@@ -72,8 +72,7 @@ export function UIUserInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     return {
         
         'email': json['email'],
-        'familyDisplayName': json['familyDisplayName'],
-        'familyUri': json['familyUri'],
+        'role': UIUserRoleFromJSON(json['role']),
         'firstName': json['firstName'] == null ? undefined : json['firstName'],
         'lastName': json['lastName'] == null ? undefined : json['lastName'],
     };
@@ -86,8 +85,7 @@ export function UIUserInfoToJSON(value?: UIUserInfo | null): any {
     return {
         
         'email': value['email'],
-        'familyDisplayName': value['familyDisplayName'],
-        'familyUri': value['familyUri'],
+        'role': UIUserRoleToJSON(value['role']),
         'firstName': value['firstName'],
         'lastName': value['lastName'],
     };
