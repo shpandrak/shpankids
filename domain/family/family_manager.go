@@ -414,14 +414,23 @@ func (m *Manager) ListProblemsForProblemSet(
 	familyId string,
 	userId string,
 	problemSetId string,
+	includeArchived bool,
 ) shpanstream.Stream[shpankids.FamilyProblemDto] {
 	// Get the user email from the context
 	repo, err := newFamilyProblemsRepository(ctx, m.kvs, familyId, userId, problemSetId)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.FamilyProblemDto](err)
 	}
+
+	var s shpanstream.Stream[functional.Entry[string, dbProblem]]
 	// Find the problems in repo
-	return shpanstream.MapStream(repo.StreamIncludingArchived(ctx), mapFamilyProblemDbToDto)
+	if includeArchived {
+		s = repo.StreamIncludingArchived(ctx)
+
+	} else {
+		s = repo.Stream(ctx)
+	}
+	return shpanstream.MapStream(s, mapFamilyProblemDbToDto)
 
 }
 
@@ -467,7 +476,7 @@ func (m *Manager) GenerateNewProblems(
 		ctx,
 		userId,
 		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbProblemSet]{Key: problemSetId, Value: dbPs}),
-		m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId),
+		m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId, true),
 		additionalRequestText,
 	)
 }

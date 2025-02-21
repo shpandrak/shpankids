@@ -15,23 +15,42 @@ func (oa *OapiServerApiImpl) GetUserInfo(
 	ctx context.Context,
 	_ openapi.GetUserInfoRequestObject,
 ) (openapi.GetUserInfoResponseObject, error) {
-	email, err := oa.userSessionManager(ctx)
+	userId, s, err := oa.getUserAndSession(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := oa.userManager.FindUser(ctx, *email)
+	user, err := oa.userManager.FindUser(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
-		return nil, util.ForbiddenError(fmt.Errorf("%s is not a valid user", *email))
+		return nil, util.ForbiddenError(fmt.Errorf("%s is not a valid user", userId))
+	}
+
+	f, err := oa.familyManager.GetFamily(ctx, s.FamilyId)
+	if err != nil {
+		return nil, err
+	}
+
+	uiUserRole := openapi.Guest
+	fm := functional.FindFirst(f.Members, func(member shpankids.FamilyMemberDto) bool {
+		return member.UserId == userId
+	})
+	if fm != nil {
+		switch fm.Role {
+		case shpankids.RoleAdmin:
+			uiUserRole = openapi.FamilyAdmin
+		case shpankids.RoleMember:
+			uiUserRole = openapi.FamilyMember
+		}
 	}
 
 	return openapi.GetUserInfo200JSONResponse{
-		Email:     openapitypes.Email(*email),
+		Email:     openapitypes.Email(userId),
 		FirstName: castutil.ValToValPtr(user.FirstName),
 		LastName:  castutil.ValToValPtr(user.LastName),
+		Role:      uiUserRole,
 	}, nil
 }
 

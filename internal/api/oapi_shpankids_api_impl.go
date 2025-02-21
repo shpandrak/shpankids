@@ -131,7 +131,13 @@ func (oa *OapiServerApiImpl) ListProblemSetProblems(
 	return &streamingProblemsForEdit{
 		ctx: ctx,
 		stream: shpanstream.MapStream(
-			oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, request.Params.UserId, request.ProblemSetId),
+			oa.familyManager.ListProblemsForProblemSet(
+				ctx,
+				s.FamilyId,
+				request.Params.UserId,
+				request.ProblemSetId,
+				false,
+			),
 			ToApiProblemForEdit,
 		),
 	}, nil
@@ -189,7 +195,7 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 	}
 
 	first, err := shpanstream.MapStreamWithError(
-		oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, userId, request.Body.AssignmentId),
+		oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, userId, request.Body.AssignmentId, false),
 		toApiProblem,
 	).FindFirst(ctx)
 	if err != nil {

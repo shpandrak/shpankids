@@ -109,7 +109,14 @@ type FamilyManager interface {
 	CreateProblemsInSet(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem []CreateProblemDto) error
 	CreateProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet CreateProblemSetDto) error
 	ListProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
-	ListProblemsForProblemSet(ctx context.Context, familyId string, userId string, problemSetId string) shpanstream.Stream[FamilyProblemDto]
+
+	ListProblemsForProblemSet(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		includingArchived bool,
+	) shpanstream.Stream[FamilyProblemDto]
 
 	GenerateNewProblems(
 		ctx context.Context,

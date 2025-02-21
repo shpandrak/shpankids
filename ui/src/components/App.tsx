@@ -43,7 +43,39 @@ function App() {
                 />
             )}
             <Routes>
-                <Route path="/ui" element={<Layout/>}>
+                <Route path="/ui" element={(
+
+                    <div>
+                        <nav>
+                            <span>
+                              <Link to="">Today</Link>
+                            </span>
+                            <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                            <span>
+                            <Link to="page/stats">Stats</Link>
+                            </span>
+                            {userInfo.role === "familyAdmin" && (
+                                <>
+                                    <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                                    <span>
+                                    <Link to="page/family">Family</Link>
+                                    </span>
+                                    <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                                    <span>
+                                    <Link to="page/problemsets">Problem Sets</Link>
+                                    </span>
+                                </>
+                            )}
+                        </nav>
+                        <hr/>
+
+                        {/* An <Outlet> renders whatever child route is currently active,
+                            so you can think about this <Outlet> as a placeholder for
+                            the child routes we defined above.
+                        */}
+                        <Outlet/>
+                    </div>
+                )}>
                     <Route
                         index
                         element={
@@ -64,37 +96,6 @@ function App() {
                     />
                 </Route>
             </Routes>
-        </div>
-    );
-}
-
-function Layout() {
-    return (
-        <div>
-            <nav>
-                <span>
-                  <Link to="">Tasks</Link>
-                </span>
-                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <span>
-                  <Link to="page/family">Family</Link>
-                </span>
-                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <span>
-                  <Link to="page/stats">Stats</Link>
-                </span>
-                <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                <span>
-                  <Link to="page/problemsets">Problem Sets</Link>
-                </span>
-            </nav>
-
-            <hr/>
-
-            {/* An <Outlet> renders whatever child route is currently active,
-          so you can think about this <Outlet> as a placeholder for
-          the child routes we defined above. */}
-            <Outlet/>
         </div>
     );
 }
