@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"shpankids/domain/ai"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
+	"shpankids/internal/api"
 	"shpankids/internal/infra/util"
 	"shpankids/openapi"
 	"shpankids/shpankids"
@@ -457,6 +459,46 @@ func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbProblemSet]) *shpa
 	}
 }
 
+func (m *Manager) getProblemSet(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+) (*shpankids.FamilyProblemSetDto, error) {
+	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, userId)
+	if err != nil {
+		return nil, err
+	}
+	dbPs, err := psRepo.Get(ctx, problemSetId)
+	if err != nil {
+		return nil, err
+	}
+	return mapFamilyProblemSetDbToDto(&functional.Entry[string, dbProblemSet]{Key: problemSetId, Value: dbPs}), nil
+
+}
+
+func (m *Manager) RefineProblems(
+	ctx context.Context,
+	familyId string,
+	userId string,
+	problemSetId string,
+	origProblems shpanstream.Stream[openapi.ApiProblemForEdit],
+	refineInstructions string,
+) shpanstream.Stream[openapi.ApiProblemForEdit] {
+	ps, err := m.getProblemSet(ctx, familyId, userId, problemSetId)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
+	}
+	return ai.RefineProblems(
+		ctx,
+		userId,
+		*ps,
+		origProblems,
+		refineInstructions,
+	)
+
+}
+
 func (m *Manager) GenerateNewProblems(
 	ctx context.Context,
 	familyId string,
@@ -464,19 +506,19 @@ func (m *Manager) GenerateNewProblems(
 	problemSetId string,
 	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
-	psRepo, err := newProblemSetsRepository(ctx, m.kvs, familyId, userId)
+	ps, err := m.getProblemSet(ctx, familyId, userId, problemSetId)
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
-	dbPs, err := psRepo.Get(ctx, problemSetId)
-	if err != nil {
-		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
-	}
-	return generateProblems(
+
+	return ai.GenerateProblems(
 		ctx,
 		userId,
-		*mapFamilyProblemSetDbToDto(&functional.Entry[string, dbProblemSet]{Key: problemSetId, Value: dbPs}),
-		m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId, true),
+		*ps,
+		shpanstream.MapStream(
+			m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId, true),
+			api.ToApiProblemForEdit,
+		),
 		additionalRequestText,
 	)
 }

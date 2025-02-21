@@ -126,6 +126,15 @@ type FamilyManager interface {
 		additionalRequestText string,
 	) shpanstream.Stream[openapi.ApiProblemForEdit]
 
+	RefineProblems(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		origProblems shpanstream.Stream[openapi.ApiProblemForEdit],
+		refineInstructions string,
+	) shpanstream.Stream[openapi.ApiProblemForEdit]
+
 	SubmitProblemAnswer(
 		ctx context.Context,
 		familyId string,

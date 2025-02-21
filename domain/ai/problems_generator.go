@@ -1,11 +1,11 @@
-package family
+package ai
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
+	"shpankids/domain/ai/gemini"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
 	"shpankids/openapi"
@@ -13,80 +13,23 @@ import (
 	"strings"
 )
 
-func generateProblems(
+func GenerateProblems(
 	ctx context.Context,
 	forUserId string,
 	problemSet shpankids.FamilyProblemSetDto,
-	examples shpanstream.Stream[shpankids.FamilyProblemDto],
+	examples shpanstream.Stream[openapi.ApiProblemForEdit],
 	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
-	client, err := genai.NewClient(ctx, option.WithAPIKey(shpankids.GetSecrets().Gemini.ApiKey))
+	model, err := gemini.GetModel(ctx)
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
-	defer client.Close()
-
-	model := client.GenerativeModel("gemini-2.0-flash")
-	//model.SetTemperature(1)
-	//model.SetTopK(40)
-	//model.SetTopP(0.95)
-	//model.SetMaxOutputTokens(8192)
 	model.ResponseMIMEType = "application/json"
-	model.ResponseSchema = &genai.Schema{
-		Type:        genai.TypeArray,
-		Description: "List of next problems to challenge the family member with on the topic",
-		Items: &genai.Schema{
-			Type: genai.TypeObject,
-			Required: []string{
-				"title",
-				"answers",
-			},
-			Properties: map[string]*genai.Schema{
-				"title": {
-					Type:        genai.TypeString,
-					Description: "problem title and question",
-					Nullable:    false,
-				},
-				"description": {
-					Type:        genai.TypeString,
-					Description: "problem description",
-					Nullable:    true,
-				},
-				"answers": {
-					Type:     genai.TypeArray,
-					Nullable: false,
-					Items: &genai.Schema{
-						Type: genai.TypeObject,
-						Required: []string{
-							"title",
-							"isCorrect",
-						},
-						Properties: map[string]*genai.Schema{
-							"title": {
-								Type:        genai.TypeString,
-								Description: "answer title",
-								Nullable:    false,
-							},
-							"description": {
-								Type:        genai.TypeString,
-								Description: "answer description",
-								Nullable:    true,
-							},
-							"isCorrect": {
-								Type:        genai.TypeBoolean,
-								Description: "is this answer correct",
-								Nullable:    false,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	model.ResponseSchema = apiProblemsForEditArrSchema()
 
 	strs, err := shpanstream.MapStreamWithError(
 		examples.Limit(10),
-		func(ctx context.Context, dto *shpankids.FamilyProblemDto) (*string, error) {
+		func(ctx context.Context, dto *openapi.ApiProblemForEdit) (*string, error) {
 			marshal, err := json.Marshal(dto)
 			if err != nil {
 				return nil, err
@@ -152,4 +95,62 @@ func generateProblems(
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}
 	return shpanstream.Just(parsedJsonProblems...)
+}
+
+func apiProblemsForEditArrSchema() *genai.Schema {
+	return &genai.Schema{
+		Type:        genai.TypeArray,
+		Description: "List of next problems to challenge the family member with on the topic",
+		Items:       apiProblemForEditSchema(),
+	}
+}
+
+func apiProblemForEditSchema() *genai.Schema {
+	return &genai.Schema{
+		Type: genai.TypeObject,
+		Required: []string{
+			"title",
+			"answers",
+		},
+		Properties: map[string]*genai.Schema{
+			"title": {
+				Type:        genai.TypeString,
+				Description: "problem title and question",
+				Nullable:    false,
+			},
+			"description": {
+				Type:        genai.TypeString,
+				Description: "problem description",
+				Nullable:    true,
+			},
+			"answers": {
+				Type:     genai.TypeArray,
+				Nullable: false,
+				Items: &genai.Schema{
+					Type: genai.TypeObject,
+					Required: []string{
+						"title",
+						"isCorrect",
+					},
+					Properties: map[string]*genai.Schema{
+						"title": {
+							Type:        genai.TypeString,
+							Description: "answer title",
+							Nullable:    false,
+						},
+						"description": {
+							Type:        genai.TypeString,
+							Description: "answer description",
+							Nullable:    true,
+						},
+						"isCorrect": {
+							Type:        genai.TypeBoolean,
+							Description: "is this answer correct",
+							Nullable:    false,
+						},
+					},
+				},
+			},
+		},
+	}
 }

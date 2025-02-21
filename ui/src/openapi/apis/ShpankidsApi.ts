@@ -25,6 +25,7 @@ import type {
   ApiLoadProblemForAssignmentCommandResult,
   ApiProblemForEdit,
   ApiProblemSet,
+  ApiRefineProblemsCommandArgs,
   ApiSubmitProblemAnswerCommandArgs,
   ApiSubmitProblemAnswerCommandResp,
   ApiTaskStats,
@@ -52,6 +53,8 @@ import {
     ApiProblemForEditToJSON,
     ApiProblemSetFromJSON,
     ApiProblemSetToJSON,
+    ApiRefineProblemsCommandArgsFromJSON,
+    ApiRefineProblemsCommandArgsToJSON,
     ApiSubmitProblemAnswerCommandArgsFromJSON,
     ApiSubmitProblemAnswerCommandArgsToJSON,
     ApiSubmitProblemAnswerCommandRespFromJSON,
@@ -100,6 +103,10 @@ export interface ListUserFamilyProblemSetsRequest {
 
 export interface LoadProblemForAssignmentRequest {
     apiLoadProblemForAssignmentCommandArgs?: ApiLoadProblemForAssignmentCommandArgs;
+}
+
+export interface RefineProblemsRequest {
+    apiRefineProblemsCommandArgs?: ApiRefineProblemsCommandArgs;
 }
 
 export interface SubmitProblemAnswerRequest {
@@ -427,6 +434,35 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async loadProblemForAssignment(requestParameters: LoadProblemForAssignmentRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiLoadProblemForAssignmentCommandResult> {
         const response = await this.loadProblemForAssignmentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Refine problems for problem set
+     */
+    async refineProblemsRaw(requestParameters: RefineProblemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiProblemForEdit>>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/api/commands/refine-problems`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApiRefineProblemsCommandArgsToJSON(requestParameters['apiRefineProblemsCommandArgs']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiProblemForEditFromJSON));
+    }
+
+    /**
+     * Refine problems for problem set
+     */
+    async refineProblems(requestParameters: RefineProblemsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiProblemForEdit>> {
+        const response = await this.refineProblemsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
