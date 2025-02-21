@@ -99,27 +99,6 @@ func (oa *OapiServerApiImpl) getUserAndSession(ctx context.Context) (string, *sh
 	return *userId, s, nil
 }
 
-func (oa *OapiServerApiImpl) GenerateProblems(
-	ctx context.Context,
-	request openapi.GenerateProblemsRequestObject,
-) (openapi.GenerateProblemsResponseObject, error) {
-	_, s, err := oa.getUserAndSession(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &streamingProblemsForEdit{
-		ctx: ctx,
-		stream: oa.familyManager.GenerateNewProblems(
-			ctx,
-			s.FamilyId,
-			request.Body.UserId,
-			request.Body.ProblemSetId,
-			castutil.StrPtrToStr(request.Body.AdditionalRequestText),
-		),
-	}, nil
-
-}
-
 func (oa *OapiServerApiImpl) ListProblemSetProblems(
 	ctx context.Context,
 	request openapi.ListProblemSetProblemsRequestObject,

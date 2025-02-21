@@ -31,10 +31,23 @@ const ProblemsSelectorComp: React.FC<ProblemsSelectorCompProps> = (props) => {
             <i>Update and select the problems to add to the problem-set</i>
             <hr/>
             <table>
+                <thead>
+                <tr>
+                    <th colSpan={2} align={"left"}>
+                        <input type="checkbox" checked={props.problems.every(p => p.selected)} onChange={
+                            (e) => {
+                                const newProblems = props.problems.map(p => new SelectableProblem(p.problem, e.target.checked));
+                                props.updateProblems(newProblems);
+                            }
+                        }/>
+                        <label>Select All</label>
+                    </th>
+                </tr>
+                </thead>
                 <tbody>
                 {props.problems.map((problem, idx) => (
                     <tr key={idx}>
-                        <td>
+                        <td valign={"top"}>
                             <input type="checkbox" checked={problem.selected} onChange={
                                 (e) => {
                                     const newProblems = props.problems.map((p, innerIdx) => {

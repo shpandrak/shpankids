@@ -108,6 +108,27 @@ paths:
                 items:
                   $ref: '#/components/schemas/ApiProblemForEdit'
 
+  /api/commands/refine-problems:
+    post:
+      tags:
+        - shpankids
+      description: Refine problems for problem set
+      operationId: refineProblems
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiRefineProblemsCommandArgs'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiProblemForEdit'
+
   /api/commands/create-family-task:
     post:
       tags:
@@ -595,6 +616,25 @@ components:
           type: string
         additionalRequestText:
           type: string
+
+    ApiRefineProblemsCommandArgs:
+      type: object
+      required:
+        - problemSetId
+        - userId
+        - refineText
+        - problems
+      properties:
+        problemSetId:
+          type: string
+        userId:
+          type: string
+        refineText:
+          type: string
+        problems:
+            type: array
+            items:
+                $ref: '#/components/schemas/ApiProblemForEdit'
 
     ApiCreateProblemsInSetCommandArgs:
       type: object

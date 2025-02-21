@@ -156,6 +156,14 @@ type ApiProblemSet struct {
 	Title       string  `json:"title"`
 }
 
+// ApiRefineProblemsCommandArgs defines model for ApiRefineProblemsCommandArgs.
+type ApiRefineProblemsCommandArgs struct {
+	ProblemSetId string              `json:"problemSetId"`
+	Problems     []ApiProblemForEdit `json:"problems"`
+	RefineText   string              `json:"refineText"`
+	UserId       string              `json:"userId"`
+}
+
 // ApiSubmitProblemAnswerCommandArgs defines model for ApiSubmitProblemAnswerCommandArgs.
 type ApiSubmitProblemAnswerCommandArgs struct {
 	AnswerId     string `json:"answerId"`
@@ -266,6 +274,9 @@ type GenerateProblemsJSONRequestBody = ApiGenerateProblemsCommandArgs
 // LoadProblemForAssignmentJSONRequestBody defines body for LoadProblemForAssignment for application/json ContentType.
 type LoadProblemForAssignmentJSONRequestBody = ApiLoadProblemForAssignmentCommandArgs
 
+// RefineProblemsJSONRequestBody defines body for RefineProblems for application/json ContentType.
+type RefineProblemsJSONRequestBody = ApiRefineProblemsCommandArgs
+
 // SubmitProblemAnswerJSONRequestBody defines body for SubmitProblemAnswer for application/json ContentType.
 type SubmitProblemAnswerJSONRequestBody = ApiSubmitProblemAnswerCommandArgs
 
@@ -298,6 +309,9 @@ type ServerInterface interface {
 
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/commands/refine-problems)
+	RefineProblems(w http.ResponseWriter, r *http.Request)
 
 	// (POST /api/commands/submit-problem-answer)
 	SubmitProblemAnswer(w http.ResponseWriter, r *http.Request)
@@ -429,6 +443,21 @@ func (siw *ServerInterfaceWrapper) LoadProblemForAssignment(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.LoadProblemForAssignment(w, r)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// RefineProblems operation middleware
+func (siw *ServerInterfaceWrapper) RefineProblems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefineProblems(w, r)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -755,6 +784,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/load-problem-for-assignment", wrapper.LoadProblemForAssignment).Methods("POST")
 
+	r.HandleFunc(options.BaseURL+"/api/commands/refine-problems", wrapper.RefineProblems).Methods("POST")
+
 	r.HandleFunc(options.BaseURL+"/api/commands/submit-problem-answer", wrapper.SubmitProblemAnswer).Methods("POST")
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-family-task", wrapper.UpdateFamilyTask).Methods("POST")
@@ -882,6 +913,23 @@ type LoadProblemForAssignmentResponseObject interface {
 type LoadProblemForAssignment200JSONResponse ApiLoadProblemForAssignmentCommandResult
 
 func (response LoadProblemForAssignment200JSONResponse) VisitLoadProblemForAssignmentResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RefineProblemsRequestObject struct {
+	Body *RefineProblemsJSONRequestBody
+}
+
+type RefineProblemsResponseObject interface {
+	VisitRefineProblemsResponse(w http.ResponseWriter) error
+}
+
+type RefineProblems200JSONResponse []ApiProblemForEdit
+
+func (response RefineProblems200JSONResponse) VisitRefineProblemsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -1044,6 +1092,9 @@ type StrictServerInterface interface {
 
 	// (POST /api/commands/load-problem-for-assignment)
 	LoadProblemForAssignment(ctx context.Context, request LoadProblemForAssignmentRequestObject) (LoadProblemForAssignmentResponseObject, error)
+
+	// (POST /api/commands/refine-problems)
+	RefineProblems(ctx context.Context, request RefineProblemsRequestObject) (RefineProblemsResponseObject, error)
 
 	// (POST /api/commands/submit-problem-answer)
 	SubmitProblemAnswer(ctx context.Context, request SubmitProblemAnswerRequestObject) (SubmitProblemAnswerResponseObject, error)
@@ -1309,6 +1360,37 @@ func (sh *strictHandler) LoadProblemForAssignment(w http.ResponseWriter, r *http
 	}
 }
 
+// RefineProblems operation middleware
+func (sh *strictHandler) RefineProblems(w http.ResponseWriter, r *http.Request) {
+	var request RefineProblemsRequestObject
+
+	var body RefineProblemsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RefineProblems(ctx, request.(RefineProblemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefineProblems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RefineProblemsResponseObject); ok {
+		if err := validResponse.VisitRefineProblemsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SubmitProblemAnswer operation middleware
 func (sh *strictHandler) SubmitProblemAnswer(w http.ResponseWriter, r *http.Request) {
 	var request SubmitProblemAnswerRequestObject
@@ -1532,33 +1614,34 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

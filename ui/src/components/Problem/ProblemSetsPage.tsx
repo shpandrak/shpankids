@@ -80,6 +80,21 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                         updateProblemSetHandler={(problemSet: ApiProblemSet): Promise<void> => {
                             throw new Error("Not implemented yet");
                         }}
+                        refineProblemsHandler={(
+                            problemSetId: string,
+                            userId: string,
+                            refineText: string,
+                            problemsToRefine: ApiProblemForEdit[]
+                        ): Promise<ApiProblemForEdit[]> => {
+                            return shpanKidsApi.refineProblems({
+                                apiRefineProblemsCommandArgs: {
+                                    problemSetId: problemSetId,
+                                    userId: userId,
+                                    refineText: refineText,
+                                    problems: problemsToRefine
+                                }
+                            });
+                        }}
                         generateProblemsHandler={(
                             problemSetId: string,
                             userId: string,

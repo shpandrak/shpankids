@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/castutil"
 	"shpankids/openapi"
 	"shpankids/shpankids"
@@ -49,7 +50,10 @@ func (oa *OapiServerApiImpl) CreateFamilyTask(ctx context.Context, request opena
 	return openapi.CreateFamilyTask200Response{}, nil
 }
 
-func (oa *OapiServerApiImpl) UpdateFamilyTask(ctx context.Context, request openapi.UpdateFamilyTaskRequestObject) (openapi.UpdateFamilyTaskResponseObject, error) {
+func (oa *OapiServerApiImpl) UpdateFamilyTask(
+	ctx context.Context,
+	request openapi.UpdateFamilyTaskRequestObject,
+) (openapi.UpdateFamilyTaskResponseObject, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (oa *OapiServerApiImpl) DeleteFamilyTask(
@@ -92,4 +96,46 @@ func (oa *OapiServerApiImpl) CreateProblemSet(
 		return nil, err
 	}
 	return openapi.CreateProblemSet200Response{}, nil
+}
+
+func (oa *OapiServerApiImpl) GenerateProblems(
+	ctx context.Context,
+	request openapi.GenerateProblemsRequestObject,
+) (openapi.GenerateProblemsResponseObject, error) {
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &streamingProblemsForEdit{
+		ctx: ctx,
+		stream: oa.familyManager.GenerateNewProblems(
+			ctx,
+			s.FamilyId,
+			request.Body.UserId,
+			request.Body.ProblemSetId,
+			castutil.StrPtrToStr(request.Body.AdditionalRequestText),
+		),
+	}, nil
+
+}
+
+func (oa *OapiServerApiImpl) RefineProblems(
+	ctx context.Context,
+	request openapi.RefineProblemsRequestObject,
+) (openapi.RefineProblemsResponseObject, error) {
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &streamingProblemsForEdit{
+		ctx: ctx,
+		stream: oa.familyManager.RefineProblems(
+			ctx,
+			s.FamilyId,
+			request.Body.UserId,
+			request.Body.ProblemSetId,
+			shpanstream.Just(request.Body.Problems...),
+			request.Body.RefineText,
+		),
+	}, nil
 }

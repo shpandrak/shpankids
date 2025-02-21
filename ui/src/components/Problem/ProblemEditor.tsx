@@ -18,9 +18,12 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
             <h2>Edit Problem</h2>
             <div style={{display: "grid", gridTemplateColumns: "1fr 3fr", gap: "10px", textAlign: "left"}}>
                 <label>Title</label>
-                <input type="text" value={props.problem.title} onChange={
-                    (e) => props.onChanges({...props.problem, title: e.target.value})
-                }/>
+                <textarea
+                    value={props.problem.title}
+                    onChange={(e) => props.onChanges({ ...props.problem, title: e.target.value })}
+                    rows={4} // Adjust the number of rows for initial height
+                    style={{ width: '100%' }} // Optional: Make it full width
+                />
                 <label>Description</label>
                 <input type="text" value={props.problem.description} onChange={
                     (e) => props.onChanges({...props.problem, description: e.target.value})

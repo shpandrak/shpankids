@@ -12,6 +12,7 @@ export interface ProblemSetEditorProps {
     problemSet: ApiProblemSet;
     userId: string;
     generateProblemsHandler: (problemSetId: string, userId: string, additionalRequestText?: string) => Promise<ApiProblemForEdit[]>;
+    refineProblemsHandler: (problemSetId: string, userId: string, refineText: string, problemsToRefine: ApiProblemForEdit[]) => Promise<ApiProblemForEdit[]>;
     createNewProblemsHandler: (problemsToCreate: ApiProblemForEdit[]) => Promise<void>;
     deleteProblemHandler: (problemsToEdit: ApiProblemForEdit[]) => Promise<void>;
     updateProblemHandler: (problemSet: ApiProblemForEdit) => Promise<void>;
@@ -103,6 +104,23 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
                         }}>Add Selected Problems
                         </button>
                     </div>
+                )}
+                {suggestedProblems && (
+                    <button onClick={() => {
+                        const refineText = window.prompt("Enter refine text");
+                        if (refineText == null) return;
+                        props.refineProblemsHandler(
+                            props.problemSet.id,
+                            props.userId, refineText,
+                            suggestedProblems
+                                .filter((problem) => problem.selected)
+                                .map((problem) => problem.problem))
+                            .then(problems => problems
+                                .map((problem) => new SelectableProblem(problem, false))
+                            )
+                            .then(setSuggestedProblems)
+                            .catch(showError)
+                    }}>Refine Selected Problems</button>
                 )}
             </div>
             {newProblem && (
