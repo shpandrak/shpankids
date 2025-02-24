@@ -136,7 +136,10 @@ func FlatMapStream[SRC any, TGT any](src Stream[SRC], mapper func(*SRC) Stream[T
 		return &s, nil
 	})
 
-	collect, _ := streamOfStreams.Collect(context.Background())
+	collect, err := streamOfStreams.Collect(context.Background())
+	if err != nil {
+		return NewErrorStream[TGT](err)
+	}
 	return ConcatenatedStream[TGT](functional.MapSliceUnPtr(collect)...)
 }
 

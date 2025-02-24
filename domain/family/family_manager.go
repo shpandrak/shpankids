@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"log/slog"
 	"shpankids/domain/ai"
+	"shpankids/domain/problemset"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
 	"shpankids/infra/shpanstream"
@@ -139,7 +141,7 @@ func (m *Manager) CreateProblemSet(ctx context.Context, familyId string, forUser
 	return psRepo.Set(
 		ctx,
 		familyProblemSet.ProblemSetId,
-		dbProblemSet{
+		problemset.DbProblemSet{
 			Title:       familyProblemSet.Title,
 			Description: familyProblemSet.Description,
 			Created:     createTime,
@@ -204,9 +206,9 @@ func (m *Manager) CreateProblemsInSet(
 			}
 		}
 
-		dbAnswers := make(map[string]dbProblemAnswer, len(p.Answers))
+		dbAnswers := make(map[string]problemset.DbProblemAnswer, len(p.Answers))
 		for idx, a := range p.Answers {
-			dbAnswers[fmt.Sprintf("%d", idx)] = dbProblemAnswer{
+			dbAnswers[fmt.Sprintf("%d", idx)] = problemset.DbProblemAnswer{
 				Title:       a.Title,
 				Description: a.Description,
 				Correct:     a.Correct,
@@ -214,7 +216,7 @@ func (m *Manager) CreateProblemsInSet(
 		}
 
 		// Create the family task in repo
-		err = repo.Set(ctx, uuid.NewString(), dbProblem{
+		err = repo.Set(ctx, uuid.NewString(), problemset.DbProblem{
 			Title:       p.Title,
 			Description: p.Description,
 			Created:     createdTime,
@@ -249,7 +251,7 @@ func (m *Manager) SubmitProblemAnswer(
 		return false, "", nil, err
 	}
 
-	correctAnswerId := functional.FindKeyInMap(dbP.Answers, func(a *dbProblemAnswer) bool {
+	correctAnswerId := functional.FindKeyInMap(dbP.Answers, func(a *problemset.DbProblemAnswer) bool {
 		return a.Correct
 	})
 	if correctAnswerId == nil {
@@ -275,7 +277,7 @@ func (m *Manager) SubmitProblemAnswer(
 	}
 
 	return dbPs.Correct, *correctAnswerId, mapFamilyProblemDbToDto(
-		&functional.Entry[string, dbProblem]{Key: problemId, Value: dbP},
+		&functional.Entry[string, problemset.DbProblem]{Key: problemId, Value: dbP},
 	), nil
 
 }
@@ -296,7 +298,7 @@ func (m *Manager) getProblem(
 	if err != nil {
 		return nil, err
 	}
-	return mapFamilyProblemDbToDto(&functional.Entry[string, dbProblem]{Key: problemId, Value: dbP}), nil
+	return mapFamilyProblemDbToDto(&functional.Entry[string, problemset.DbProblem]{Key: problemId, Value: dbP}), nil
 }
 
 func (m *Manager) ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[shpankids.FamilyTaskDto] {
@@ -424,7 +426,7 @@ func (m *Manager) ListProblemsForProblemSet(
 		return shpanstream.NewErrorStream[shpankids.FamilyProblemDto](err)
 	}
 
-	var s shpanstream.Stream[functional.Entry[string, dbProblem]]
+	var s shpanstream.Stream[functional.Entry[string, problemset.DbProblem]]
 	// Find the problems in repo
 	if includeArchived {
 		s = repo.StreamIncludingArchived(ctx)
@@ -436,7 +438,7 @@ func (m *Manager) ListProblemsForProblemSet(
 
 }
 
-func mapFamilyProblemDbToDto(e *functional.Entry[string, dbProblem]) *shpankids.FamilyProblemDto {
+func mapFamilyProblemDbToDto(e *functional.Entry[string, problemset.DbProblem]) *shpankids.FamilyProblemDto {
 	return &shpankids.FamilyProblemDto{
 		ProblemId:   e.Key,
 		Title:       e.Value.Title,
@@ -448,7 +450,7 @@ func mapFamilyProblemDbToDto(e *functional.Entry[string, dbProblem]) *shpankids.
 	}
 }
 
-func mapFamilyProblemSetDbToDto(e *functional.Entry[string, dbProblemSet]) *shpankids.FamilyProblemSetDto {
+func mapFamilyProblemSetDbToDto(e *functional.Entry[string, problemset.DbProblemSet]) *shpankids.FamilyProblemSetDto {
 	return &shpankids.FamilyProblemSetDto{
 		ProblemSetId: e.Key,
 		Title:        e.Value.Title,
@@ -473,7 +475,7 @@ func (m *Manager) getProblemSet(
 	if err != nil {
 		return nil, err
 	}
-	return mapFamilyProblemSetDbToDto(&functional.Entry[string, dbProblemSet]{Key: problemSetId, Value: dbPs}), nil
+	return mapFamilyProblemSetDbToDto(&functional.Entry[string, problemset.DbProblemSet]{Key: problemSetId, Value: dbPs}), nil
 
 }
 
@@ -522,13 +524,70 @@ func (m *Manager) GenerateNewProblems(
 		additionalRequestText,
 	)
 }
-func mapFamilyProblemAlternativeDbToDto(problemId string, a dbProblemAnswer) shpankids.ProblemAnswerDto {
+func mapFamilyProblemAlternativeDbToDto(problemId string, a problemset.DbProblemAnswer) shpankids.ProblemAnswerDto {
 	return shpankids.ProblemAnswerDto{
 		Id:          problemId,
 		Title:       a.Title,
 		Description: a.Description,
 		Correct:     a.Correct,
 	}
+}
+
+type titleAndCorrectAnswerId struct {
+	Title           string
+	CorrectAnswerId string
+}
+
+func (m *Manager) ListUserProblemsSolutions(
+	ctx context.Context,
+	familyId string,
+	problemSetId string,
+	userId string,
+) shpanstream.Stream[openapi.ApiUserProblemSolution] {
+	sr, err := newFamilyProblemsSolutionsRepository(ctx, m.kvs, familyId, userId, problemSetId)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiUserProblemSolution](err)
+	}
+
+	// todo:amit:bad, all in memory :(
+	allProblems, err := m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId, true).CollectFilterNil(ctx)
+	if err != nil {
+		return shpanstream.NewErrorStream[openapi.ApiUserProblemSolution](err)
+	}
+	problemMap := functional.SliceToMapKeyAndValueNoErr(
+		allProblems,
+		func(p shpankids.FamilyProblemDto) string {
+			return p.ProblemId
+		}, func(p shpankids.FamilyProblemDto) titleAndCorrectAnswerId {
+			first := functional.FindFirst(p.Answers, func(a shpankids.ProblemAnswerDto) bool {
+				return a.Correct
+			})
+			if first == nil {
+				return titleAndCorrectAnswerId{
+					Title:           p.Title,
+					CorrectAnswerId: "",
+				}
+			}
+			return titleAndCorrectAnswerId{
+				Title:           p.Title,
+				CorrectAnswerId: first.Id,
+			}
+		})
+
+	filterNil, err := sr.Stream(ctx).CollectFilterNil(ctx)
+	slog.Info(fmt.Sprintf("struff %v %v", filterNil, err))
+
+	return shpanstream.MapStream(sr.Stream(ctx), func(e *datekvs.DatedRecord[functional.Entry[string, dbProblemSolution]]) *openapi.ApiUserProblemSolution {
+		return &openapi.ApiUserProblemSolution{
+			ProblemId:            e.Value.Key,
+			CorrectAnswerId:      problemMap[e.Value.Key].CorrectAnswerId,
+			ProblemTitle:         problemMap[e.Value.Key].Title,
+			SolvedDate:           e.Date.Time,
+			UserProvidedAnswerId: e.Value.Value.SelectedAnswerId,
+			Correct:              e.Value.Value.Correct,
+		}
+	})
+
 }
 
 func (m *Manager) ListProblemSetSolutionsForDate(
@@ -542,7 +601,7 @@ func (m *Manager) ListProblemSetSolutionsForDate(
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.ProblemSolutionDto](err)
 	}
-	return shpanstream.MapStream(sr.GetAllForDate(ctx, forDate), func(e *functional.Entry[string, dbProblemSolution]) *shpankids.ProblemSolutionDto {
+	return shpanstream.MapStream(sr.StreamAllForDate(ctx, forDate), func(e *functional.Entry[string, dbProblemSolution]) *shpankids.ProblemSolutionDto {
 		return &shpankids.ProblemSolutionDto{
 			ProblemId:        e.Key,
 			SelectedAnswerId: e.Value.SelectedAnswerId,

@@ -199,6 +199,16 @@ type ApiUpdateTaskStatusCommandArgs struct {
 	TaskId  string              `json:"taskId"`
 }
 
+// ApiUserProblemSolution defines model for ApiUserProblemSolution.
+type ApiUserProblemSolution struct {
+	Correct              bool      `json:"correct"`
+	CorrectAnswerId      string    `json:"correctAnswerId"`
+	ProblemId            string    `json:"problemId"`
+	ProblemTitle         string    `json:"problemTitle"`
+	SolvedDate           time.Time `json:"solvedDate"`
+	UserProvidedAnswerId string    `json:"userProvidedAnswerId"`
+}
+
 // UIFamilyInfo Family info
 type UIFamilyInfo struct {
 	AdminEmail        openapi_types.Email `json:"adminEmail"`
@@ -327,6 +337,9 @@ type ServerInterface interface {
 
 	// (GET /api/family-problem-sets/{problemSetId}/problems-for-edit)
 	ListProblemSetProblems(w http.ResponseWriter, r *http.Request, problemSetId string, params ListProblemSetProblemsParams)
+
+	// (GET /api/family-problem-sets/{problemSetId}/{userId}/solutions)
+	ListUserProblemsSolutions(w http.ResponseWriter, r *http.Request, problemSetId string, userId string)
 
 	// (GET /api/stats)
 	GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams)
@@ -591,6 +604,41 @@ func (siw *ServerInterfaceWrapper) ListProblemSetProblems(w http.ResponseWriter,
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// ListUserProblemsSolutions operation middleware
+func (siw *ServerInterfaceWrapper) ListUserProblemsSolutions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "problemSetId" -------------
+	var problemSetId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemSetId", mux.Vars(r)["problemSetId"], &problemSetId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemSetId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", mux.Vars(r)["userId"], &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserProblemsSolutions(w, r, problemSetId, userId)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // GetStats operation middleware
 func (siw *ServerInterfaceWrapper) GetStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -795,6 +843,8 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 	r.HandleFunc(options.BaseURL+"/api/family-problem-sets", wrapper.ListUserFamilyProblemSets).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/api/family-problem-sets/{problemSetId}/problems-for-edit", wrapper.ListProblemSetProblems).Methods("GET")
+
+	r.HandleFunc(options.BaseURL+"/api/family-problem-sets/{problemSetId}/{userId}/solutions", wrapper.ListUserProblemsSolutions).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/api/stats", wrapper.GetStats).Methods("GET")
 
@@ -1020,6 +1070,24 @@ func (response ListProblemSetProblems200JSONResponse) VisitListProblemSetProblem
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListUserProblemsSolutionsRequestObject struct {
+	ProblemSetId string `json:"problemSetId"`
+	UserId       string `json:"userId"`
+}
+
+type ListUserProblemsSolutionsResponseObject interface {
+	VisitListUserProblemsSolutionsResponse(w http.ResponseWriter) error
+}
+
+type ListUserProblemsSolutions200JSONResponse []ApiUserProblemSolution
+
+func (response ListUserProblemsSolutions200JSONResponse) VisitListUserProblemsSolutionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetStatsRequestObject struct {
 	Params GetStatsParams
 }
@@ -1110,6 +1178,9 @@ type StrictServerInterface interface {
 
 	// (GET /api/family-problem-sets/{problemSetId}/problems-for-edit)
 	ListProblemSetProblems(ctx context.Context, request ListProblemSetProblemsRequestObject) (ListProblemSetProblemsResponseObject, error)
+
+	// (GET /api/family-problem-sets/{problemSetId}/{userId}/solutions)
+	ListUserProblemsSolutions(ctx context.Context, request ListUserProblemsSolutionsRequestObject) (ListUserProblemsSolutionsResponseObject, error)
 
 	// (GET /api/stats)
 	GetStats(ctx context.Context, request GetStatsRequestObject) (GetStatsResponseObject, error)
@@ -1537,6 +1608,33 @@ func (sh *strictHandler) ListProblemSetProblems(w http.ResponseWriter, r *http.R
 	}
 }
 
+// ListUserProblemsSolutions operation middleware
+func (sh *strictHandler) ListUserProblemsSolutions(w http.ResponseWriter, r *http.Request, problemSetId string, userId string) {
+	var request ListUserProblemsSolutionsRequestObject
+
+	request.ProblemSetId = problemSetId
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUserProblemsSolutions(ctx, request.(ListUserProblemsSolutionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUserProblemsSolutions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListUserProblemsSolutionsResponseObject); ok {
+		if err := validResponse.VisitListUserProblemsSolutionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetStats operation middleware
 func (sh *strictHandler) GetStats(w http.ResponseWriter, r *http.Request, params GetStatsParams) {
 	var request GetStatsRequestObject
@@ -1614,34 +1712,36 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"49fjfwEAAP//F7MZ/ekwAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

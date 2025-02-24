@@ -21,6 +21,26 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) ListUserProblemsSolutions(
+	ctx context.Context,
+	request openapi.ListUserProblemsSolutionsRequestObject,
+) (openapi.ListUserProblemsSolutionsResponseObject, error) {
+
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &streamingProblemSetSolution{
+		ctx: ctx,
+		stream: oa.familyManager.ListUserProblemsSolutions(
+			ctx,
+			s.FamilyId,
+			request.ProblemSetId,
+			request.UserId,
+		),
+	}, nil
+}
+
 func (oa *OapiServerApiImpl) SubmitProblemAnswer(
 	ctx context.Context,
 	request openapi.SubmitProblemAnswerRequestObject,
