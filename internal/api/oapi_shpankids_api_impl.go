@@ -21,6 +21,23 @@ type OapiServerApiImpl struct {
 	sessionManager     shpankids.SessionManager
 }
 
+func (oa *OapiServerApiImpl) GetProblem(ctx context.Context, request openapi.GetProblemRequestObject) (openapi.GetProblemResponseObject, error) {
+	_, s, err := oa.getUserAndSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p, err := oa.familyManager.GetProblem(ctx, s.FamilyId, request.UserId, request.ProblemSetId, request.ProblemId)
+	if err != nil {
+		return nil, err
+	}
+
+	apiPrb, err := toApiProblem(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	return openapi.GetProblem200JSONResponse(*apiPrb), nil
+}
+
 func (oa *OapiServerApiImpl) ListUserProblemsSolutions(
 	ctx context.Context,
 	request openapi.ListUserProblemsSolutionsRequestObject,
@@ -133,7 +150,7 @@ func (oa *OapiServerApiImpl) ListProblemSetProblems(
 			oa.familyManager.ListProblemsForProblemSet(
 				ctx,
 				s.FamilyId,
-				request.Params.UserId,
+				request.UserId,
 				request.ProblemSetId,
 				false,
 			),

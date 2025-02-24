@@ -23,6 +23,7 @@ import type {
   ApiGenerateProblemsCommandArgs,
   ApiLoadProblemForAssignmentCommandArgs,
   ApiLoadProblemForAssignmentCommandResult,
+  ApiProblem,
   ApiProblemForEdit,
   ApiProblemSet,
   ApiRefineProblemsCommandArgs,
@@ -50,6 +51,8 @@ import {
     ApiLoadProblemForAssignmentCommandArgsToJSON,
     ApiLoadProblemForAssignmentCommandResultFromJSON,
     ApiLoadProblemForAssignmentCommandResultToJSON,
+    ApiProblemFromJSON,
+    ApiProblemToJSON,
     ApiProblemForEditFromJSON,
     ApiProblemForEditToJSON,
     ApiProblemSetFromJSON,
@@ -88,6 +91,12 @@ export interface DeleteFamilyTaskRequest {
 
 export interface GenerateProblemsRequest {
     apiGenerateProblemsCommandArgs?: ApiGenerateProblemsCommandArgs;
+}
+
+export interface GetProblemRequest {
+    problemSetId: string;
+    userId: string;
+    problemId: string;
 }
 
 export interface GetStatsRequest {
@@ -276,6 +285,53 @@ export class ShpankidsApi extends runtime.BaseAPI {
     }
 
     /**
+     * get Problem Set Problem
+     */
+    async getProblemRaw(requestParameters: GetProblemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ApiProblem>> {
+        if (requestParameters['problemSetId'] == null) {
+            throw new runtime.RequiredError(
+                'problemSetId',
+                'Required parameter "problemSetId" was null or undefined when calling getProblem().'
+            );
+        }
+
+        if (requestParameters['userId'] == null) {
+            throw new runtime.RequiredError(
+                'userId',
+                'Required parameter "userId" was null or undefined when calling getProblem().'
+            );
+        }
+
+        if (requestParameters['problemId'] == null) {
+            throw new runtime.RequiredError(
+                'problemId',
+                'Required parameter "problemId" was null or undefined when calling getProblem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/api/family-members/{userId}/problem-sets/{problemSetId}/problems/{problemId}`.replace(`{${"problemSetId"}}`, encodeURIComponent(String(requestParameters['problemSetId']))).replace(`{${"userId"}}`, encodeURIComponent(String(requestParameters['userId']))).replace(`{${"problemId"}}`, encodeURIComponent(String(requestParameters['problemId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ApiProblemFromJSON(jsonValue));
+    }
+
+    /**
+     * get Problem Set Problem
+     */
+    async getProblem(requestParameters: GetProblemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ApiProblem> {
+        const response = await this.getProblemRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Task statistics
      */
     async getStatsRaw(requestParameters: GetStatsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiTaskStats>>> {
@@ -355,14 +411,10 @@ export class ShpankidsApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
-        if (requestParameters['userId'] != null) {
-            queryParameters['userId'] = requestParameters['userId'];
-        }
-
         const headerParameters: runtime.HTTPHeaders = {};
 
         const response = await this.request({
-            path: `/api/family-problem-sets/{problemSetId}/problems-for-edit`.replace(`{${"problemSetId"}}`, encodeURIComponent(String(requestParameters['problemSetId']))),
+            path: `/api/family-members/{userId}/problem-sets/{problemSetId}/problems-for-edit`.replace(`{${"problemSetId"}}`, encodeURIComponent(String(requestParameters['problemSetId']))).replace(`{${"userId"}}`, encodeURIComponent(String(requestParameters['userId']))),
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,

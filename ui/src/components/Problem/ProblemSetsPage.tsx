@@ -4,9 +4,10 @@ import {shpanKidsApi} from "../App.tsx";
 import {showError} from "../Util.ts";
 import {ApiProblemForEdit, ApiProblemSet, UIFamilyInfo, UIFamilyMember} from "../../openapi";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faList, faTrash} from "@fortawesome/free-solid-svg-icons";
+import {faList, faTrash, faChartSimple} from "@fortawesome/free-solid-svg-icons";
 import ProblemSetEditor from "./ProblemSetEditor.tsx";
 import ProblemSetDetailsEditor from "./ProblemSetDetailsEditor.tsx";
+import SolutionsAnalysisComp from "./SolutionsAnalysisComp.tsx";
 
 
 export interface ProblemSetsPageProps {
@@ -147,6 +148,30 @@ const ProblemSetsPage: React.FC<ProblemSetsPageProps> = (props) => {
                                     reloadProblemsList(problemSet);
                                 }}>
                                     <FontAwesomeIcon icon={faList}/>
+                                </button>
+
+                                <button onClick={() => {
+                                    shpanKidsApi.listUserProblemsSolutions({
+                                        userId: familyMember.email,
+                                        problemSetId: problemSet.id
+                                    }).then((solutions) => {
+                                        setSubComponent(
+                                            <SolutionsAnalysisComp
+                                                uiCtx={props.uiCtx}
+                                                solutions={solutions}
+                                                problemSet={problemSet}
+                                                problemFetcher={(problemId) => {
+                                                    return shpanKidsApi.getProblem({
+                                                        userId: familyMember.email,
+                                                        problemSetId: problemSet.id,
+                                                        problemId: problemId
+                                                    });
+                                                }}
+                                            />
+                                        );
+                                    }).catch(showError);
+                                }}>
+                                    <FontAwesomeIcon icon={faChartSimple}/>
                                 </button>
                                 <button onClick={() => {
                                     alert("Not implemented yet");
