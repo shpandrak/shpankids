@@ -2,7 +2,6 @@ package datekvs
 
 import (
 	"context"
-	"fmt"
 	"shpankids/infra/database/kvstore"
 	"shpankids/infra/shpanstream"
 	"shpankids/infra/util/functional"
@@ -17,7 +16,7 @@ func NewDateKvsImpl[T any](rawKvs kvstore.RawJsonStore) DateKvStore[T] {
 	return &dateKvsImpl[T]{rawKvs: rawKvs}
 }
 
-func (d *dateKvsImpl[T]) GetAllForDate(ctx context.Context, forDate Date) shpanstream.Stream[functional.Entry[string, T]] {
+func (d *dateKvsImpl[T]) StreamAllForDate(ctx context.Context, forDate Date) shpanstream.Stream[functional.Entry[string, T]] {
 	return d.getStoreForDate(ctx, forDate).Stream(ctx)
 }
 
@@ -41,25 +40,84 @@ func (d *dateKvsImpl[T]) Find(ctx context.Context, forDate Date, key string) (*T
 	return d.getStoreForDate(ctx, forDate).Find(ctx, key)
 }
 
-func (d *dateKvsImpl[T]) GetRangeForKey(ctx context.Context, from Date, to Date, key string) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
-	return shpanstream.NewErrorStream[DatedRecord[functional.Entry[string, T]]](fmt.Errorf("not implemented"))
+func (d *dateKvsImpl[T]) StreamAllEntriesForKey(ctx context.Context, key string) shpanstream.Stream[DatedRecord[T]] {
+	return shpanstream.FlatMapStream(
+		d.streamAllDateRecords(ctx),
+		func(currDate *Date) shpanstream.Stream[DatedRecord[T]] {
+			find, err := d.Find(ctx, *currDate, key)
+			if err != nil {
+				return shpanstream.NewErrorStream[DatedRecord[T]](err)
+			}
+			if find == nil {
+				return shpanstream.EmptyStream[DatedRecord[T]]()
+			} else {
+				return shpanstream.Just(DatedRecord[T]{
+					Date:  *currDate,
+					Value: *find,
+				})
+			}
+		},
+	)
 }
 
-func (d *dateKvsImpl[T]) GetRange(ctx context.Context, from Date, to Date) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
-	return shpanstream.FlatMapStream[Date, DatedRecord[functional.Entry[string, T]]](
-		shpanstream.MapStreamWithError(
-			d.rawKvs.StreamAllNamespaces(ctx),
-			func(_ context.Context, ns *string) (*Date, error) {
-				tm, err := time.Parse(time.DateOnly, *ns)
-				if err != nil {
-					return nil, err
-				}
-				return NewDateFromTime(tm), nil
+func (d *dateKvsImpl[T]) StreamRangeForKey(ctx context.Context, from Date, to Date, key string) shpanstream.Stream[DatedRecord[T]] {
 
-			},
-		).FilterWithError(func(ctx context.Context, tm *Date) (bool, error) {
-			return !tm.Before(from.Time) && tm.Before(to.Time), nil
-		}),
+	return shpanstream.FlatMapStream(
+		d.streamAllDatesForDateRage(ctx, from, to),
+		func(currDate *Date) shpanstream.Stream[DatedRecord[T]] {
+			find, err := d.Find(ctx, *currDate, key)
+			if err != nil {
+				return shpanstream.NewErrorStream[DatedRecord[T]](err)
+			}
+			if find == nil {
+				return shpanstream.EmptyStream[DatedRecord[T]]()
+			} else {
+				return shpanstream.Just(DatedRecord[T]{
+					Date:  *currDate,
+					Value: *find,
+				})
+			}
+		},
+	)
+}
+
+func (d *dateKvsImpl[T]) Stream(ctx context.Context) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
+	return shpanstream.FlatMapStream[Date, DatedRecord[functional.Entry[string, T]]](
+		d.streamAllDateRecords(ctx),
+		func(ns *Date) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
+			return shpanstream.MapStream[functional.Entry[string, T], DatedRecord[functional.Entry[string, T]]](
+				d.getStoreForDate(ctx, *ns).Stream(ctx),
+				func(entry *functional.Entry[string, T]) *DatedRecord[functional.Entry[string, T]] {
+					return &DatedRecord[functional.Entry[string, T]]{*ns, *entry}
+				})
+
+		},
+	)
+
+}
+
+func (d *dateKvsImpl[T]) streamAllDatesForDateRage(ctx context.Context, from Date, to Date) shpanstream.Stream[Date] {
+	return d.streamAllDateRecords(ctx).Filter(func(tm *Date) bool {
+		return !tm.Before(from.Time) && tm.Before(to.Time)
+	})
+}
+
+func (d *dateKvsImpl[T]) streamAllDateRecords(ctx context.Context) shpanstream.Stream[Date] {
+	return shpanstream.MapStreamWhileFiltering(
+		d.rawKvs.StreamAllNamespaces(ctx),
+		func(ns *string) *Date {
+			tm, err := time.Parse(time.DateOnly, *ns)
+			if err != nil {
+				return nil
+			}
+			return NewDateFromTime(tm)
+		},
+	)
+}
+
+func (d *dateKvsImpl[T]) StreamRange(ctx context.Context, from Date, to Date) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
+	return shpanstream.FlatMapStream[Date, DatedRecord[functional.Entry[string, T]]](
+		d.streamAllDatesForDateRage(ctx, from, to),
 		func(ns *Date) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]] {
 			return shpanstream.MapStream[functional.Entry[string, T], DatedRecord[functional.Entry[string, T]]](
 				d.getStoreForDate(ctx, *ns).Stream(ctx),

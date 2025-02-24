@@ -244,6 +244,35 @@ paths:
                 items:
                   $ref: '#/components/schemas/ApiProblemSet'
 
+  /api/family-problem-sets/{problemSetId}/{userId}/solutions:
+    get:
+      tags:
+        - shpankids
+      description: list solutions for problem set by user
+      operationId: listUserProblemsSolutions
+      parameters:
+        - name: problemSetId
+          in: path
+          description: Problem Set ID
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiUserProblemSolution'
+
   /api/family-problem-sets/{problemSetId}/problems-for-edit:
     get:
       tags:
@@ -691,3 +720,28 @@ components:
             type: string
           description:
             type: string
+
+    ApiUserProblemSolution:
+        type: object
+        required:
+          - problemId
+          - problemTitle
+          - solvedDate
+          - userProvidedAnswerId
+          - correctAnswerId
+          - correct
+        properties:
+          problemId:
+            type: string
+          problemTitle:
+            type: string
+          solvedDate:
+            type: string
+            format: date-time
+          userProvidedAnswerId:
+            type: string
+          correctAnswerId:
+            type: string
+          correct:
+            type: boolean
+

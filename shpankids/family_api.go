@@ -152,4 +152,11 @@ type FamilyManager interface {
 		problemSetId string,
 		forDate datekvs.Date,
 	) shpanstream.Stream[ProblemSolutionDto]
+
+	ListUserProblemsSolutions(
+		ctx context.Context,
+		familyId string,
+		problemSetId string,
+		userId string,
+	) shpanstream.Stream[openapi.ApiUserProblemSolution]
 }

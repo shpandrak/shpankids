@@ -31,6 +31,7 @@ import type {
   ApiTaskStats,
   ApiUpdateFamilyTaskCommandArgs,
   ApiUpdateTaskStatusCommandArgs,
+  ApiUserProblemSolution,
 } from '../models/index';
 import {
     ApiAssignmentFromJSON,
@@ -65,6 +66,8 @@ import {
     ApiUpdateFamilyTaskCommandArgsToJSON,
     ApiUpdateTaskStatusCommandArgsFromJSON,
     ApiUpdateTaskStatusCommandArgsToJSON,
+    ApiUserProblemSolutionFromJSON,
+    ApiUserProblemSolutionToJSON,
 } from '../models/index';
 
 export interface CreateFamilyTaskRequest {
@@ -98,6 +101,11 @@ export interface ListProblemSetProblemsRequest {
 }
 
 export interface ListUserFamilyProblemSetsRequest {
+    userId: string;
+}
+
+export interface ListUserProblemsSolutionsRequest {
+    problemSetId: string;
     userId: string;
 }
 
@@ -405,6 +413,46 @@ export class ShpankidsApi extends runtime.BaseAPI {
      */
     async listUserFamilyProblemSets(requestParameters: ListUserFamilyProblemSetsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiProblemSet>> {
         const response = await this.listUserFamilyProblemSetsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * list solutions for problem set by user
+     */
+    async listUserProblemsSolutionsRaw(requestParameters: ListUserProblemsSolutionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ApiUserProblemSolution>>> {
+        if (requestParameters['problemSetId'] == null) {
+            throw new runtime.RequiredError(
+                'problemSetId',
+                'Required parameter "problemSetId" was null or undefined when calling listUserProblemsSolutions().'
+            );
+        }
+
+        if (requestParameters['userId'] == null) {
+            throw new runtime.RequiredError(
+                'userId',
+                'Required parameter "userId" was null or undefined when calling listUserProblemsSolutions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/api/family-problem-sets/{problemSetId}/{userId}/solutions`.replace(`{${"problemSetId"}}`, encodeURIComponent(String(requestParameters['problemSetId']))).replace(`{${"userId"}}`, encodeURIComponent(String(requestParameters['userId']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ApiUserProblemSolutionFromJSON));
+    }
+
+    /**
+     * list solutions for problem set by user
+     */
+    async listUserProblemsSolutions(requestParameters: ListUserProblemsSolutionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ApiUserProblemSolution>> {
+        const response = await this.listUserProblemsSolutionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

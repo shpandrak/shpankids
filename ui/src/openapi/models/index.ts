@@ -23,6 +23,7 @@ export * from './ApiSubmitProblemAnswerCommandResp';
 export * from './ApiTaskStats';
 export * from './ApiUpdateFamilyTaskCommandArgs';
 export * from './ApiUpdateTaskStatusCommandArgs';
+export * from './ApiUserProblemSolution';
 export * from './UIFamilyInfo';
 export * from './UIFamilyMember';
 export * from './UIFamilyTask';

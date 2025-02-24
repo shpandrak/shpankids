@@ -51,9 +51,9 @@ func Start(
 	if err != nil {
 		return fmt.Errorf("error loading swagger spec\n: %w", err)
 	}
-	apiSubRouter := router.PathPrefix("/api").Subrouter()
+	apiSubRouter := router.PathPrefix("/").Subrouter()
 	apiSubRouter.Use(middleware.OapiRequestValidator(swagger))
-	//apiSubRouter.Use(mustUserMiddleware)
+	apiSubRouter.Use(middleware.OapiRequestValidator(swagger))
 
 	apiImpl := api.NewOapiServerApiImpl(
 		auth.GetUserInfo,
@@ -76,7 +76,7 @@ func Start(
 		withStrictHandler,
 		openapi.GorillaServerOptions{
 			BaseURL:          "",
-			BaseRouter:       router,
+			BaseRouter:       apiSubRouter,
 			Middlewares:      []openapi.MiddlewareFunc{mustUserMiddleware},
 			ErrorHandlerFunc: api.HandleErrors,
 		})

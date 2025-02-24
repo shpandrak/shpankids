@@ -39,6 +39,15 @@ type streamingProblemsForEdit struct {
 	ctx    context.Context
 }
 
+type streamingProblemSetSolution struct {
+	stream shpanstream.Stream[openapi.ApiUserProblemSolution]
+	ctx    context.Context
+}
+
+func (s streamingProblemSetSolution) VisitListUserProblemsSolutionsResponse(w http.ResponseWriter) error {
+	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
+}
+
 func (s *streamingProblemsForEdit) VisitRefineProblemsResponse(w http.ResponseWriter) error {
 	return shpanstream.StreamToJsonResponseWriter(s.ctx, w, s.stream)
 }

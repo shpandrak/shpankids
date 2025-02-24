@@ -223,7 +223,7 @@ func (m *managerImpl) filterTaskAssignmentsForUser(
 		return shpanstream.NewErrorStream[shpankids.Assignment](err)
 	}
 
-	err = userTaskRepo.GetAllForDate(ctx, forDate).Consume(
+	err = userTaskRepo.StreamAllForDate(ctx, forDate).Consume(
 		ctx,
 		func(dr *functional.Entry[string, dbUserTaskStatus]) {
 			foundTask, found := assignmentsById[dr.Key]
@@ -295,7 +295,7 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 				DoneTasksCount:  0,
 			}
 
-			err := userTaskRepo.GetAllForDate(ctx, *dt).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
+			err := userTaskRepo.StreamAllForDate(ctx, *dt).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
 
 				if _, found := userAssignableTasksByTaskId[dr.Key]; found {
 					if dr.Value.Status == shpankids.StatusDone {
