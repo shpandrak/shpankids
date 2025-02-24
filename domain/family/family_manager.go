@@ -282,7 +282,7 @@ func (m *Manager) SubmitProblemAnswer(
 
 }
 
-func (m *Manager) getProblem(
+func (m *Manager) GetProblem(
 	ctx context.Context,
 	familyId string,
 	userId string,
@@ -294,7 +294,7 @@ func (m *Manager) getProblem(
 		return nil, err
 	}
 	// Find the problems in repo
-	dbP, err := pRepo.Get(ctx, problemId)
+	dbP, err := pRepo.GetIncludingArchived(ctx, problemId)
 	if err != nil {
 		return nil, err
 	}

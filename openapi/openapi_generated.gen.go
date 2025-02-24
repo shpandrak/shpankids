@@ -251,12 +251,6 @@ type ListUserFamilyProblemSetsParams struct {
 	UserId string `form:"userId" json:"userId"`
 }
 
-// ListProblemSetProblemsParams defines parameters for ListProblemSetProblems.
-type ListProblemSetProblemsParams struct {
-	// UserId User ID
-	UserId string `form:"userId" json:"userId"`
-}
-
 // GetStatsParams defines parameters for GetStats.
 type GetStatsParams struct {
 	// From From date
@@ -332,11 +326,14 @@ type ServerInterface interface {
 	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(w http.ResponseWriter, r *http.Request)
 
+	// (GET /api/family-members/{userId}/problem-sets/{problemSetId}/problems-for-edit)
+	ListProblemSetProblems(w http.ResponseWriter, r *http.Request, userId string, problemSetId string)
+
+	// (GET /api/family-members/{userId}/problem-sets/{problemSetId}/problems/{problemId})
+	GetProblem(w http.ResponseWriter, r *http.Request, userId string, problemSetId string, problemId string)
+
 	// (GET /api/family-problem-sets)
 	ListUserFamilyProblemSets(w http.ResponseWriter, r *http.Request, params ListUserFamilyProblemSetsParams)
-
-	// (GET /api/family-problem-sets/{problemSetId}/problems-for-edit)
-	ListProblemSetProblems(w http.ResponseWriter, r *http.Request, problemSetId string, params ListProblemSetProblemsParams)
 
 	// (GET /api/family-problem-sets/{problemSetId}/{userId}/solutions)
 	ListUserProblemsSolutions(w http.ResponseWriter, r *http.Request, problemSetId string, userId string)
@@ -525,6 +522,85 @@ func (siw *ServerInterfaceWrapper) UpdateTaskStatus(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// ListProblemSetProblems operation middleware
+func (siw *ServerInterfaceWrapper) ListProblemSetProblems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", mux.Vars(r)["userId"], &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problemSetId" -------------
+	var problemSetId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemSetId", mux.Vars(r)["problemSetId"], &problemSetId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemSetId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProblemSetProblems(w, r, userId, problemSetId)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetProblem operation middleware
+func (siw *ServerInterfaceWrapper) GetProblem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "userId" -------------
+	var userId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", mux.Vars(r)["userId"], &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problemSetId" -------------
+	var problemSetId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemSetId", mux.Vars(r)["problemSetId"], &problemSetId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemSetId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "problemId" -------------
+	var problemId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "problemId", mux.Vars(r)["problemId"], &problemId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProblem(w, r, userId, problemSetId, problemId)
+	}))
+
+	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
+		handler = siw.HandlerMiddlewares[i](handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // ListUserFamilyProblemSets operation middleware
 func (siw *ServerInterfaceWrapper) ListUserFamilyProblemSets(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -551,50 +627,6 @@ func (siw *ServerInterfaceWrapper) ListUserFamilyProblemSets(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListUserFamilyProblemSets(w, r, params)
-	}))
-
-	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
-		handler = siw.HandlerMiddlewares[i](handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// ListProblemSetProblems operation middleware
-func (siw *ServerInterfaceWrapper) ListProblemSetProblems(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// ------------- Path parameter "problemSetId" -------------
-	var problemSetId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "problemSetId", mux.Vars(r)["problemSetId"], &problemSetId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "problemSetId", Err: err})
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListProblemSetProblemsParams
-
-	// ------------- Required query parameter "userId" -------------
-
-	if paramValue := r.URL.Query().Get("userId"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "userId"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "userId", r.URL.Query(), &params.UserId)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListProblemSetProblems(w, r, problemSetId, params)
 	}))
 
 	for i := len(siw.HandlerMiddlewares) - 1; i >= 0; i-- {
@@ -840,9 +872,11 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 
 	r.HandleFunc(options.BaseURL+"/api/commands/update-task-status", wrapper.UpdateTaskStatus).Methods("POST")
 
-	r.HandleFunc(options.BaseURL+"/api/family-problem-sets", wrapper.ListUserFamilyProblemSets).Methods("GET")
+	r.HandleFunc(options.BaseURL+"/api/family-members/{userId}/problem-sets/{problemSetId}/problems-for-edit", wrapper.ListProblemSetProblems).Methods("GET")
 
-	r.HandleFunc(options.BaseURL+"/api/family-problem-sets/{problemSetId}/problems-for-edit", wrapper.ListProblemSetProblems).Methods("GET")
+	r.HandleFunc(options.BaseURL+"/api/family-members/{userId}/problem-sets/{problemSetId}/problems/{problemId}", wrapper.GetProblem).Methods("GET")
+
+	r.HandleFunc(options.BaseURL+"/api/family-problem-sets", wrapper.ListUserFamilyProblemSets).Methods("GET")
 
 	r.HandleFunc(options.BaseURL+"/api/family-problem-sets/{problemSetId}/{userId}/solutions", wrapper.ListUserProblemsSolutions).Methods("GET")
 
@@ -1035,6 +1069,43 @@ func (response UpdateTaskStatus200Response) VisitUpdateTaskStatusResponse(w http
 	return nil
 }
 
+type ListProblemSetProblemsRequestObject struct {
+	UserId       string `json:"userId"`
+	ProblemSetId string `json:"problemSetId"`
+}
+
+type ListProblemSetProblemsResponseObject interface {
+	VisitListProblemSetProblemsResponse(w http.ResponseWriter) error
+}
+
+type ListProblemSetProblems200JSONResponse []ApiProblemForEdit
+
+func (response ListProblemSetProblems200JSONResponse) VisitListProblemSetProblemsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetProblemRequestObject struct {
+	UserId       string `json:"userId"`
+	ProblemSetId string `json:"problemSetId"`
+	ProblemId    string `json:"problemId"`
+}
+
+type GetProblemResponseObject interface {
+	VisitGetProblemResponse(w http.ResponseWriter) error
+}
+
+type GetProblem200JSONResponse ApiProblem
+
+func (response GetProblem200JSONResponse) VisitGetProblemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListUserFamilyProblemSetsRequestObject struct {
 	Params ListUserFamilyProblemSetsParams
 }
@@ -1046,24 +1117,6 @@ type ListUserFamilyProblemSetsResponseObject interface {
 type ListUserFamilyProblemSets200JSONResponse []ApiProblemSet
 
 func (response ListUserFamilyProblemSets200JSONResponse) VisitListUserFamilyProblemSetsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type ListProblemSetProblemsRequestObject struct {
-	ProblemSetId string `json:"problemSetId"`
-	Params       ListProblemSetProblemsParams
-}
-
-type ListProblemSetProblemsResponseObject interface {
-	VisitListProblemSetProblemsResponse(w http.ResponseWriter) error
-}
-
-type ListProblemSetProblems200JSONResponse []ApiProblemForEdit
-
-func (response ListProblemSetProblems200JSONResponse) VisitListProblemSetProblemsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -1173,11 +1226,14 @@ type StrictServerInterface interface {
 	// (POST /api/commands/update-task-status)
 	UpdateTaskStatus(ctx context.Context, request UpdateTaskStatusRequestObject) (UpdateTaskStatusResponseObject, error)
 
+	// (GET /api/family-members/{userId}/problem-sets/{problemSetId}/problems-for-edit)
+	ListProblemSetProblems(ctx context.Context, request ListProblemSetProblemsRequestObject) (ListProblemSetProblemsResponseObject, error)
+
+	// (GET /api/family-members/{userId}/problem-sets/{problemSetId}/problems/{problemId})
+	GetProblem(ctx context.Context, request GetProblemRequestObject) (GetProblemResponseObject, error)
+
 	// (GET /api/family-problem-sets)
 	ListUserFamilyProblemSets(ctx context.Context, request ListUserFamilyProblemSetsRequestObject) (ListUserFamilyProblemSetsResponseObject, error)
-
-	// (GET /api/family-problem-sets/{problemSetId}/problems-for-edit)
-	ListProblemSetProblems(ctx context.Context, request ListProblemSetProblemsRequestObject) (ListProblemSetProblemsResponseObject, error)
 
 	// (GET /api/family-problem-sets/{problemSetId}/{userId}/solutions)
 	ListUserProblemsSolutions(ctx context.Context, request ListUserProblemsSolutionsRequestObject) (ListUserProblemsSolutionsResponseObject, error)
@@ -1555,6 +1611,61 @@ func (sh *strictHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// ListProblemSetProblems operation middleware
+func (sh *strictHandler) ListProblemSetProblems(w http.ResponseWriter, r *http.Request, userId string, problemSetId string) {
+	var request ListProblemSetProblemsRequestObject
+
+	request.UserId = userId
+	request.ProblemSetId = problemSetId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProblemSetProblems(ctx, request.(ListProblemSetProblemsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProblemSetProblems")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProblemSetProblemsResponseObject); ok {
+		if err := validResponse.VisitListProblemSetProblemsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProblem operation middleware
+func (sh *strictHandler) GetProblem(w http.ResponseWriter, r *http.Request, userId string, problemSetId string, problemId string) {
+	var request GetProblemRequestObject
+
+	request.UserId = userId
+	request.ProblemSetId = problemSetId
+	request.ProblemId = problemId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProblem(ctx, request.(GetProblemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProblem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProblemResponseObject); ok {
+		if err := validResponse.VisitGetProblemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListUserFamilyProblemSets operation middleware
 func (sh *strictHandler) ListUserFamilyProblemSets(w http.ResponseWriter, r *http.Request, params ListUserFamilyProblemSetsParams) {
 	var request ListUserFamilyProblemSetsRequestObject
@@ -1574,33 +1685,6 @@ func (sh *strictHandler) ListUserFamilyProblemSets(w http.ResponseWriter, r *htt
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListUserFamilyProblemSetsResponseObject); ok {
 		if err := validResponse.VisitListUserFamilyProblemSetsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListProblemSetProblems operation middleware
-func (sh *strictHandler) ListProblemSetProblems(w http.ResponseWriter, r *http.Request, problemSetId string, params ListProblemSetProblemsParams) {
-	var request ListProblemSetProblemsRequestObject
-
-	request.ProblemSetId = problemSetId
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListProblemSetProblems(ctx, request.(ListProblemSetProblemsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListProblemSetProblems")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListProblemSetProblemsResponseObject); ok {
-		if err := validResponse.VisitListProblemSetProblemsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1712,36 +1796,36 @@ func (sh *strictHandler) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/9xaS3PbNhD+Kxy0RypK25tuqp1kNEnbjB+nTA6QuJIRkwADgG48Hv33DgiQ4AMASUt0",
-	"PbnFIrmP79vFYnfzhHYsyxkFKgVaPSGxu4MMl/9c52QtBDnQDKhUP+Sc5cAlgfJxAmLHSS4Jo+pP+ZgD",
-	"WiEhOaEHdIzRnvFLLEE92zOeYYlWKMESFpJkgOL+ByRxyhESy6LU+CuHPVqhX5bW5KWxd9ky9lp/coyR",
-	"JDIFp1j9wwShN+qD4zFGHL4XhEOCVl+UzUZUpcs6Xpv+tXaWbb/BTir1LntXTwhokSm5LAeKYpQwquRs",
-	"U7a7B6WKcA4pPGAqG1KtU32DGzIlFvcoVixuU8iuwSviggOW8B5nJH28weL+gmUZpsmaH0Q/DEqpwzha",
-	"aT0MSwkejLQpn2uTg6aMiMhbAXzjjjNfqHSttSwbYWNMFxs6ZH3YOsta+IVSFJHmHwOkGOPeM/4uIdJm",
-	"BcKc48ee6y0bGhpHgHEJKUwKKaeXjsDxq9TKrljaSgKcZERlVgbZFrgvAxrROjnKtORN0mbCc/5USI8O",
-	"P33gmBi0qjwYfAAKvBGFQdhxkhDlFU6v4HsBQt7AD/m8YCx8gRyOqCIYQ58YTmzE2nMu7FT9msfUiWWq",
-	"40BLvBX2PA+uQBSpo9IalMYntA9nn12frYIOelT8C/w5Z8q6/NIV6EP5Q046nlv5UZkfdtuYOjnRz2bo",
-	"GPOqM/pcVhJxwThXyuzTLWMpYPqMYmilhX3xenFqoHlL2NzxNi3U1KXr1cXZFewJHVci/pdbiPJHWegt",
-	"R6dVm5b4hgcetK6LbUZkK/jCBah8xQPXYHUy1ozxrlOK7JextWGyT1cg8r5PO53s65Br8CNPMcX+qA4d",
-	"QN0Yrt+Ne7o9Lqm7m2qrXG0Co6AeiwtW0KZ6QiUcdNGa3LxKJnE6JHVsoNoOso7RjtF9hR4cbvPktfRy",
-	"2pSKmCJ80uxYVo0dTp8snDZCmNaNjO//VcdU1QWWFlWmOFPNXaXH5GHoBKmf3njHJIKlD5BMg7vQjj2Q",
-	"BJKAbe7TuXl43Zji2jDCI72PRf2LE/7bjQ7iDd2zXg1G+llE1MO41yVlhL7LMElbgED5iwOMfSnrkog8",
-	"xY9/48wNs37rlpNASzm+qFbe/aWbXFe3qQ6OyfJ0yg9MCawrcRMsFxLWs8qiEFfGGx9bpqPv8gUTqCJc",
-	"SC9FKQ485GbMMOrkLGcSXdgqq6wRDZVGQQid5w0rPHfLVzPDuN2UcyVnlqon0caVo6+Hc21/kPAAs/W3",
-	"jQGWzqK1GWPtm5kRo0MBwjXWVbqJAdGQhK7vckw/kkRE688bFKMH4EID+/bNb0o/y4HinKAV+uON+ilG",
-	"OZZ3JcBLnJOlvXCWvx10b9PmKCVCRuvGi6VYXl4LVVFAn4iQ7eccRM6o0Ez+/vatroJUmtsAzvOU7EoB",
-	"y29Ch7VGe0rP0Vhs9M+zbtOI/vlYsiexuql8QUIhd09UyKqfSzB2+jIjlrty7LvQxCyqG1XOhAMdPSKO",
-	"zAF2o+fzbXy6s3ikgwiE/JMlj5OwGYAkNPU/HnX09pk5Gaiq31oQuhCmPQ6BVfWpEaGRaqfdgLXG7nNj",
-	"5p3xvwBs4xEbRuvloHoBnJJy4zAuD/V2IpiH3QXGfECFViVzAHUwO4JFc3bjxqlaJ0TVq9Ge8eqPSDji",
-	"q7uAmA+20KrDD9vZC8vgSu2k4pIynFQ8LfaML3B7Qe9k7RPDiYgo/JA1VYq2xqe9ouzZU8zH3pjdzhlY",
-	"PM0Ks585kUM9bRyRbXouOz7X2nPc+bjyz4t/mjwT5UC0zjRsN0ROpvT8tCbHvN7lxzFlnY+kgTH1/Lk0",
-	"MFM+kaCinCWOq+567his7t0p6Xy8hOaxc1R3A5RCaGHHoEGglFmRmX+6gbIz3LmBck+LzwiUiaAq0wUM",
-	"NbON27QwNTTaPkZajrO9VV28JtzefkXZTXOcgSwHe1/cw41LpPp2tELfC+BKOi2HEc3VVTVQkLyAuAFv",
-	"dwLw9WUPZtVLnOdQdjC0fGqu8o7LuodUVyIwC+ZRFNp2UlVX9alCy8Wi9atRYYMUNtVYJnMs7yyRnZXk",
-	"eDrjny1gzlvJRwTNk8bkuBRm+TKQ+PVr3YuYSn8ly5v8VcBc14pec+S01bziwHHtz84TPaJaHDujoayP",
-	"6hUiJNkJR88r9eZ5gOX3nGVRopdarpzdc5ahJtDj/n9az1wWUiLZdBUvRbDd4Z+H1qI6F6p9gpPeDyAj",
-	"AUIQRk1VrxaBPZobO8QZL9OtXeWw57ebtstFY4HidThlhwMkEaHlSeZ1uF7GzOpurWWss/aHpyqu29uN",
-	"49fjfwEAAP//F7MZ/ekwAAA=",
+	"H4sIAAAAAAAC/+xaSXPbOhL+KyzMHKkoM3PTTWMnKVUyMykvp1QOsNhSEJMAA4CeuFz676+wkOACgKQl",
+	"+Tmpd7MJspevN3S3ntCWFSWjQKVAqycktt+gwPrPdUnWQpA9LYBK9aDkrAQuCejjDMSWk1ISRtW/8rEE",
+	"tEJCckL36JCiHeOXWII62zFeYIlWKMMSFpIUgNLhByTz0hESy0pz/DuHHVqhvy2dyEsr77Ij7LX55JAi",
+	"SWQOXrLmwQyiN+qDwyFFHH5UhEOGVl+UzJZUzcsp3oj+tVGW3X2HrVTsffKunhDQqlB0WQkUpShjVNG5",
+	"y9n2HhQrwjnk8ICpbFF1Sg0FbtGUWNyjVFnxLofiGoIkLjhgCe9xQfLHGyzuL1hRYJqt+V4M3UBTHcfR",
+	"URtgqCkEMDKifG5EjooywSNvBfCN389CrtKX1lnZEpsiutjQMenj0jmrxV/QpIi0f4wYxQr3nvF3GZEu",
+	"KhDmHD8OVO/I0OI4AYxLyGGWS3m19DhOmKVhdsXyThDgrCAqsgoo7oCHIqDlrbO9zFDeZF1LBPJPjfRk",
+	"9zMJx/qgYxXA4ANQ4C0vjMKOs4worXB+BT8qEPIGfsrnOWMVcuS4R1VRH/rEcOY81uW5uFLNawFRZ5ap",
+	"ngId8o7Y8zS4AlHlnkprUZoe0CGcQ3J9dgx66FHxf+DPySlr/aXP0cfihxyVnjvxUYsfV9uKOjvQTybo",
+	"FPHqHH0qKYm4YJwrZu70jrEcMH1GMXTU4roEtTjW0YIl7Nz+Ns/V1KXr1fnZFewInVYi/pRbiNJHSRgs",
+	"R8dVmw75lgYBtK6ru4LIjvPFC5B+JQDXaHWy0kzRrleK3Jepk2G2TlcgyqFOWxPs65hq8LPMMcVhr44l",
+	"oL4PN++mA94BldTdTbVVvjaBUVDH4oJVtM2eUAl7U7RmN6+SSZyPUZ3qqK6DbHy0J/SQYQCH2zJ7Lb2c",
+	"EaU2TBXPNFtW1GOH4ycLx40Q5nUj0/t/1THVdYHlVR0p3lDzV+kpcRjLIM3pTXBMIlj+ANk8uCuj2APJ",
+	"IIvI5s/O7eR1Y4trS4gA9SEWzRMv/Lcb48QbumODGozMWULUYTrokgpC3xWY5B1AQD/xgLHTtC6JKHP8",
+	"+F9c+GE2b91yEmkppxfVWrv/mCbX122qxDGbngn5kSmBUyVtg+VDwmlWSxSzldUmZC3b0fftBTNMRbiQ",
+	"QRPlOHLI7ZhhUubUM4k+bLVUTogWS8sghs7zhhWBu+WrmWHcbvRcyRul6iTZ+GL09djcyB81eMSyzbet",
+	"AZaJorUdY+3akZGifQXCN9ZVvIkF0RoJXX8rMf1IMpGsP29Qih6ACwPs2zf/UPxZCRSXBK3Qv96oRykq",
+	"sfymAV7ikizdhVM/25vepmujnAiZrFsvarJcXwtVUUCfiJDdcw6iZFQYS/7z7VtTBam0twFcljnZagLL",
+	"78K4tUF7Ts/RWmwM81m/aUT/+6itJ7G6qXxBQiF3T5TLqscajK25zIjlVo99F8Ywi/pGVTLhQceMiBOb",
+	"wG7MfL6LT38Wj4wTgZD/ZtnjLGxGIIlN/Q8H471DyxwNVN1vLQhdCNsex8Cq+9SE0ES1037AOmP3c2MW",
+	"nPG/AGzTERtH6+WgegGcMr1xmBaHZjsRjcP+AuN8QMVWJecAam93BIv27MaPU71OSOpXkx3j9T+J8PhX",
+	"fwFxPthiq44wbCcvLKMrtaOKS85wVttpsWN8gbsLeq/VPjGciYTCT9mYSpmt9emgKAf2FOez3pTdzgms",
+	"eJwUdj9zpA3NtHFCtJm57PRY685xz2er8Lz4t4kzoQeiTaRhtyHyWsrMTxvj2Nf79vFMWc9npJEx9flj",
+	"aWSmfKSBKj1LnFbdzdwxWt37U9Lz2SU2jz1HdbdAKYQWbgwaBUqJldj5px8oN8M9N1D+afEJgbIeZOdQ",
+	"yyczcD8s69AXIMXyqb05as6ErsBg95nh9rd1/3bdi0rm6lPVnvt6YndRbiX0EnNcgNSjwC99Xm02m0uk",
+	"Gn600i07ShHVQ4z+BsyNIySvIG0ZZzDA8Q9fAmxam7WpDL7+ynXjGCdqnm+yQ9CP9uB1I891W7qj39hb",
+	"0pA6I6q8sFNO/rXOEU7X9rHJeUjY239y95gYOt4kpMxmSpVLR6N5qGfrHxXwx18pNVzDidNCLAs0qULY",
+	"DeCIDZvX+t2AsqSiFbRjXUauG0Z/1ZMTOI1viXsa7xH1rxe83qAvaeoVIiTZCl8lMD9/GLHye86KJDOb",
+	"VV+87jhTtcQBM+1HkgNxWYyJZPNZvJSB3Q9JTmPWqs4L9VLLa94PIBMBQhBGbYKut9EDM7cW2WcsV52F",
+	"+bjmt5uuylVrixdUOGf7PWQJoTqTBRVuNoJnVbfhMlVZ9+Cp9uvuiu3w9fBHAAAA//8EsgipbjMAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

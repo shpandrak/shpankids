@@ -273,7 +273,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ApiUserProblemSolution'
 
-  /api/family-problem-sets/{problemSetId}/problems-for-edit:
+  /api/family-members/{userId}/problem-sets/{problemSetId}/problems-for-edit:
     get:
       tags:
         - shpankids
@@ -287,7 +287,7 @@ paths:
           schema:
             type: string
         - name: userId
-          in: query
+          in: path
           description: User ID
           required: true
           schema:
@@ -301,6 +301,40 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ApiProblemForEdit'
+
+
+  /api/family-members/{userId}/problem-sets/{problemSetId}/problems/{problemId}:
+    get:
+      tags:
+        - shpankids
+      description: get Problem Set Problem
+      operationId: getProblem
+      parameters:
+        - name: problemSetId
+          in: path
+          description: Problem Set ID
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+        - name: problemId
+          in: path
+          description: Problem ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
 
   /api/stats:
     get:

@@ -159,4 +159,12 @@ type FamilyManager interface {
 		problemSetId string,
 		userId string,
 	) shpanstream.Stream[openapi.ApiUserProblemSolution]
+
+	GetProblem(
+		ctx context.Context,
+		familyId string,
+		userId string,
+		problemSetId string,
+		problemId string,
+	) (*FamilyProblemDto, error)
 }
