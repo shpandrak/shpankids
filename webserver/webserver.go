@@ -16,23 +16,6 @@ import (
 	"shpankids/webserver/auth/google"
 )
 
-const IndexPage = `
-<html>
-	<head>
-		<title>Shpankids login</title>
-	</head>
-	<body>
-		<h2>Login to system</h2>
-		<p>
-			Login with the following,
-		</p>
-		<ul>
-			<li><a href="/login-gl">Google</a></li>
-		</ul>
-	</body>
-</html>
-`
-
 var store = sessions.NewCookieStore([]byte("shpankids-secret"))
 
 func Start(
@@ -138,6 +121,11 @@ func Start(
 
 	router.Path("/swagger").Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		http.ServeFile(writer, request, "./ui/dist/swagger-ui.html")
+	}))
+
+	// For now redirect the root to the UI
+	router.Path("/").Handler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		http.Redirect(writer, request, "/ui", http.StatusTemporaryRedirect)
 	}))
 
 	//router.Path("/metrics").Handler(promhttp.Handler())

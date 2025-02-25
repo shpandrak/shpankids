@@ -10,7 +10,8 @@ func doAuth(r *http.Request, w http.ResponseWriter) *string {
 
 	// Check if the user is authenticated
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		//http.Error(w, "Forbidden", http.StatusForbidden)
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 		return nil
 	}
 
