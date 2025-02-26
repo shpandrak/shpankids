@@ -17,7 +17,7 @@ const SolutionsAnalysisComp: React.FC<SolutionsAnalysisCompProps> = (props) => {
 
 
     const incorrectSolutions = props.solutions.filter(sol => !sol.correct);
-    const correctSolutions = props.solutions.filter(sol => !sol.correct);
+    const correctSolutions = props.solutions.filter(sol => sol.correct);
     return (
         <>
             <h2>Problem solution analysis for problem set {props.problemSet.title}</h2>

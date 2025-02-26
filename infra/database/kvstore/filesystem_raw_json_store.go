@@ -40,16 +40,10 @@ func (s *FileSystemRawJsonStore) StreamAllNamespaces(_ context.Context) shpanstr
 
 }
 
-func (s *FileSystemRawJsonStore) StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
-	// todo: do proper streaming
-
-	allJSON, err := s.ListAllJSON(ctx, namespace)
-	if err != nil {
-		return shpanstream.NewErrorStream[functional.Entry[string, json.RawMessage]](err)
-	}
-	return shpanstream.Just[functional.Entry[string, json.RawMessage]](functional.MapToSliceNoErr(allJSON, func(k string, v json.RawMessage) functional.Entry[string, json.RawMessage] {
-		return functional.Entry[string, json.RawMessage]{Key: k, Value: v}
-	})...)
+func (s *FileSystemRawJsonStore) StreamAllJson(_ context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
+	return shpanstream.NewStream[functional.Entry[string, json.RawMessage]](
+		newFilesystemJsonStreamer(s.rootDir, s.filenamePrefix, &s.mu, namespace),
+	)
 }
 
 func (s *FileSystemRawJsonStore) CreateSpaceStore(_ context.Context, spaceHierarchy []string) (RawJsonStore, error) {
@@ -204,7 +198,7 @@ func (s *FileSystemRawJsonStore) ListAllJSON(_ context.Context, namespace string
 }
 
 func (s *FileSystemRawJsonStore) getSafeFilePath(namespace string, key string) (string, error) {
-	// Ideally we'd just strip out invalid characters here (:?* etc on windows, plus \/ on linux)
+	// Ideally we'd just strip out invalid characters here (:?* etc. on windows, plus \/ on linux)
 	// but there's code that relies on the key (filename) being the same as the id within the file ..
 	// which isn't true if we modify it (e.g. filename = x, contents {"id":"x/"})
 

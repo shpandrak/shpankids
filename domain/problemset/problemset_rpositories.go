@@ -3,6 +3,7 @@ package problemset
 import (
 	"context"
 	"shpankids/infra/database/archkvs"
+	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
 	"shpankids/shpankids"
 	"time"
@@ -10,34 +11,56 @@ import (
 
 const problemSetsRepoUri = "problemSets"
 
-type problemsRepository kvstore.JsonKvStore[string, DbProblem]
-type problemSetsRepository kvstore.JsonKvStore[string, DbProblemSet]
+type ProblemsRepository archkvs.ArchivedKvs[string, DbProblem]
+type ProblemSetsRepository kvstore.JsonKvStore[string, DbProblemSet]
+type ProblemSolutionsRepository datekvs.DateKvStore[DbProblemSolution]
 
-func newProblemSetProblemsRepository(
+func NewProblemSetProblemsRepository(
 	ctx context.Context,
 	kvs kvstore.RawJsonStore,
 	problemSetId string,
-) (problemsRepository, error) {
-	psPStore, err := kvs.CreateSpaceStore(ctx, []string{
-		problemSetsRepoUri,
-		problemSetId,
-	})
+) (ProblemsRepository, error) {
+	psStore, err := createRootProblemSetStore(ctx, kvs, problemSetId)
 	if err != nil {
 		return nil, err
 	}
 
 	return archkvs.NewArchivedKvsImpl[string, DbProblem](
 		ctx,
-		psPStore,
+		psStore,
 		"problems",
 		kvstore.StringKeyToString,
 		kvstore.StringToKey,
 	)
 }
 
-func newProblemSetsRepository(
+func createRootProblemSetStore(
+	ctx context.Context,
 	kvs kvstore.RawJsonStore,
-) (problemSetsRepository, error) {
+	problemSetId string,
+) (kvstore.RawJsonStore, error) {
+	return kvs.CreateSpaceStore(ctx, []string{
+		problemSetsRepoUri,
+		problemSetId,
+	})
+}
+
+func NewProblemsSolutionsRepository(
+	ctx context.Context,
+	kvs kvstore.RawJsonStore,
+	problemSetId string,
+) (ProblemSolutionsRepository, error) {
+	psStore, err := createRootProblemSetStore(ctx, kvs, problemSetId)
+	if err != nil {
+		return nil, err
+	}
+
+	return datekvs.NewDateKvsImpl[DbProblemSolution](psStore), nil
+}
+
+func NewProblemSetsRepository(
+	kvs kvstore.RawJsonStore,
+) (ProblemSetsRepository, error) {
 	return kvstore.NewJsonKvStoreImpl[string, DbProblemSet](
 		kvs,
 		problemSetsRepoUri,
@@ -69,7 +92,7 @@ type DbProblemAnswer struct {
 	Correct     bool   `json:"correct,omitempty"`
 }
 
-type dbProblemSolution struct {
+type DbProblemSolution struct {
 	SelectedAnswerId string `json:"selectedAnswerId"`
 	Correct          bool   `json:"correct"`
 }
