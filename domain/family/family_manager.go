@@ -262,7 +262,7 @@ func (m *Manager) SubmitProblemAnswer(
 	if err != nil {
 		return false, "", nil, err
 	}
-	dbPs := dbProblemSolution{
+	dbPs := problemset.DbProblemSolution{
 		SelectedAnswerId: answerId,
 		Correct:          answerId == *correctAnswerId,
 	}
@@ -577,16 +577,21 @@ func (m *Manager) ListUserProblemsSolutions(
 	filterNil, err := sr.Stream(ctx).CollectFilterNil(ctx)
 	slog.Info(fmt.Sprintf("struff %v %v", filterNil, err))
 
-	return shpanstream.MapStream(sr.Stream(ctx), func(e *datekvs.DatedRecord[functional.Entry[string, dbProblemSolution]]) *openapi.ApiUserProblemSolution {
-		return &openapi.ApiUserProblemSolution{
-			ProblemId:            e.Value.Key,
-			CorrectAnswerId:      problemMap[e.Value.Key].CorrectAnswerId,
-			ProblemTitle:         problemMap[e.Value.Key].Title,
-			SolvedDate:           e.Date.Time,
-			UserProvidedAnswerId: e.Value.Value.SelectedAnswerId,
-			Correct:              e.Value.Value.Correct,
-		}
-	})
+	return shpanstream.MapStream(
+		sr.Stream(ctx),
+		func(
+			e *datekvs.DatedRecord[functional.Entry[string, problemset.DbProblemSolution]],
+		) *openapi.ApiUserProblemSolution {
+			return &openapi.ApiUserProblemSolution{
+				ProblemId:            e.Value.Key,
+				CorrectAnswerId:      problemMap[e.Value.Key].CorrectAnswerId,
+				ProblemTitle:         problemMap[e.Value.Key].Title,
+				SolvedDate:           e.Date.Time,
+				UserProvidedAnswerId: e.Value.Value.SelectedAnswerId,
+				Correct:              e.Value.Value.Correct,
+			}
+		},
+	)
 
 }
 
@@ -601,11 +606,14 @@ func (m *Manager) ListProblemSetSolutionsForDate(
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.ProblemSolutionDto](err)
 	}
-	return shpanstream.MapStream(sr.StreamAllForDate(ctx, forDate), func(e *functional.Entry[string, dbProblemSolution]) *shpankids.ProblemSolutionDto {
-		return &shpankids.ProblemSolutionDto{
-			ProblemId:        e.Key,
-			SelectedAnswerId: e.Value.SelectedAnswerId,
-			Correct:          e.Value.Correct,
-		}
-	})
+	return shpanstream.MapStream(
+		sr.StreamAllForDate(ctx, forDate),
+		func(e *functional.Entry[string, problemset.DbProblemSolution]) *shpankids.ProblemSolutionDto {
+			return &shpankids.ProblemSolutionDto{
+				ProblemId:        e.Key,
+				SelectedAnswerId: e.Value.SelectedAnswerId,
+				Correct:          e.Value.Correct,
+			}
+		},
+	)
 }
