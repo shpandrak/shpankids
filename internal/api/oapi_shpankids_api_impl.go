@@ -213,15 +213,15 @@ func (oa *OapiServerApiImpl) LoadProblemForAssignment(
 	first, err := shpanstream.MapStreamWithError(
 		oa.familyManager.ListProblemsForProblemSet(ctx, s.FamilyId, userId, request.Body.AssignmentId, false),
 		toApiProblem,
-	).FindFirst(ctx)
+	).GetFirst(ctx)
+
 	if err != nil {
 		return nil, err
 	}
-	ret := first.AsPtr()
-	if ret == nil {
+	if first == nil {
 		return nil, util.NotFoundError(fmt.Errorf("no problems found for set"))
 	} else {
-		return &openapi.LoadProblemForAssignment200JSONResponse{Problem: *ret}, nil
+		return &openapi.LoadProblemForAssignment200JSONResponse{Problem: *first}, nil
 	}
 
 }

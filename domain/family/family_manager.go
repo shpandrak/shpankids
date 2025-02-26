@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"log/slog"
 	"shpankids/domain/ai"
 	"shpankids/domain/problemset"
 	"shpankids/infra/database/datekvs"
@@ -550,7 +549,13 @@ func (m *Manager) ListUserProblemsSolutions(
 	}
 
 	// todo:amit:bad, all in memory :(
-	allProblems, err := m.ListProblemsForProblemSet(ctx, familyId, userId, problemSetId, true).CollectFilterNil(ctx)
+	allProblems, err := m.ListProblemsForProblemSet(
+		ctx,
+		familyId,
+		userId,
+		problemSetId,
+		true,
+	).CollectFilterNil(ctx)
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiUserProblemSolution](err)
 	}
@@ -573,9 +578,6 @@ func (m *Manager) ListUserProblemsSolutions(
 				CorrectAnswerId: first.Id,
 			}
 		})
-
-	filterNil, err := sr.Stream(ctx).CollectFilterNil(ctx)
-	slog.Info(fmt.Sprintf("struff %v %v", filterNil, err))
 
 	return shpanstream.MapStream(
 		sr.Stream(ctx),
