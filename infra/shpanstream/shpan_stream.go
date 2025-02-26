@@ -56,9 +56,9 @@ type Stream[T any] interface {
 	Skip(limit int) Stream[T]
 
 	Count(ctx context.Context) (int, error)
-	FindFirst(ctx context.Context) (Optional[T], error)
+	FindFirst() Lazy[T]
 	GetFirst(ctx context.Context) (*T, error)
-	FindLast(ctx context.Context) (Optional[T], error)
+	FindLast() Lazy[T]
 	Collect(ctx context.Context) ([]*T, error)
 	CollectFilterNil(ctx context.Context) ([]T, error)
 	SubscribeOnStreamLifecycle(lch StreamLifecycle) Stream[T]
@@ -160,9 +160,12 @@ func MapStreamWithError[SRC any, TGT any](srcS Stream[SRC], mapper func(context.
 	)
 }
 
-// MapStreamWhileFilteringWithError is a function that maps a stream of SRC to a stream of TGT while allowing to filtering.
+// MapStreamWhileFilteringWithError is a function that maps a stream of SRC to a stream of TGT while allowing to filter.
 // filtering is done by returning nil from the mapper function.
-func MapStreamWhileFilteringWithError[SRC any, TGT any](srcS Stream[SRC], mapper func(context.Context, *SRC) (*TGT, error)) Stream[TGT] {
+func MapStreamWhileFilteringWithError[SRC any, TGT any](
+	srcS Stream[SRC],
+	mapper func(context.Context, *SRC) (*TGT, error),
+) Stream[TGT] {
 	src, ok := srcS.(*stream[SRC])
 	if !ok {
 		slog.Error("Failed to cast Stream to stream")
@@ -194,55 +197,37 @@ func MapStreamWhileFilteringWithError[SRC any, TGT any](srcS Stream[SRC], mapper
 }
 
 func (s *stream[T]) GetFirst(ctx context.Context) (*T, error) {
-	first, err := s.FindFirst(ctx)
-	if err != nil {
-		return nil, err
-	}
-	get, err := first.Get()
-	if err != nil {
-		return nil, err
-	}
-	return &get, nil
-
+	return s.FindFirst().Get(ctx)
 }
-func (s *stream[T]) FindFirst(ctx context.Context) (Optional[T], error) {
-	ctxWitCancel, cancelFunc := context.WithCancel(ctx)
-	defer cancelFunc()
-	var result *T
-	var found bool
-	err := s.Consume(ctxWitCancel, func(v *T) {
-		result = v
-		found = true
-		cancelFunc()
-	})
-	// Checkin found first, because if found err will be "context canceled"
-	if found {
-		return NewOptional(*result), nil
-	}
-	if err != nil {
-		return nil, err
-	}
+func (s *stream[T]) FindFirst() Lazy[T] {
 
-	return EmptyOptional[T](), nil
+	return NewLazy[T](func(ctx context.Context) (*T, error) {
+		ctxWitCancel, cancelFunc := context.WithCancel(ctx)
+		defer cancelFunc()
+		var result *T
+		err := s.Consume(ctxWitCancel, func(v *T) {
+			result = v
+			cancelFunc()
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	})
 
 }
 
-func (s *stream[T]) FindLast(ctx context.Context) (Optional[T], error) {
-	var result *T
-	var found bool
-	err := s.Consume(ctx, func(v *T) {
-		result = v
-		found = true
+func (s *stream[T]) FindLast() Lazy[T] {
+	return NewLazy[T](func(ctx context.Context) (*T, error) {
+		var result *T
+		err := s.Consume(ctx, func(v *T) {
+			result = v
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
 	})
-	// Checkin found first, because if found err will be "context canceled"
-	if found {
-		return NewOptional(*result), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return EmptyOptional[T](), nil
-
 }
 
 func (s *stream[T]) Filter(predicate func(*T) bool) Stream[T] {
