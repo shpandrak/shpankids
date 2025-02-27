@@ -305,8 +305,11 @@ func (oa *OapiServerApiImpl) ListAssignments(
 	_ openapi.ListAssignmentsRequestObject,
 ) (openapi.ListAssignmentsResponseObject, error) {
 	return &streamingAssignments{
-		ctx:    ctx,
-		stream: shpanstream.MapStream[shpankids.Assignment, openapi.ApiAssignment](oa.assignmentManager.ListAssignmentsForToday(ctx), toApiAssignment),
+		ctx: ctx,
+		stream: shpanstream.MapStream[shpankids.Assignment, openapi.ApiAssignment](
+			oa.assignmentManager.ListAssignmentsForToday(ctx),
+			toApiAssignment,
+		),
 	}, nil
 
 }

@@ -72,8 +72,39 @@ func newStream[T any](streamProviderFunc StreamProviderFunc[T], allLifecycleElem
 	return &stream[T]{provider: streamProviderFunc, allLifecycleElement: allLifecycleElement}
 }
 
-func NewSimpleStream[T any](streamProviderFunc StreamProviderFunc[T]) Stream[T] {
-	return &stream[T]{provider: streamProviderFunc, allLifecycleElement: nil}
+type SimpleStreamOption struct {
+	openFunc  func(ctx context.Context) error
+	closeFunc func()
+}
+
+func WithOpenFuncOption(openFunc func(ctx context.Context) error) SimpleStreamOption {
+	return SimpleStreamOption{openFunc: openFunc}
+}
+
+func WithCloseFuncOption(closeFunc func()) SimpleStreamOption {
+	return SimpleStreamOption{closeFunc: closeFunc}
+}
+
+func NewSimpleStream[T any](streamProviderFunc StreamProviderFunc[T], options ...SimpleStreamOption) Stream[T] {
+	var openFunc func(ctx context.Context) error
+	var closeFunc func()
+
+	for _, option := range options {
+		if option.openFunc != nil {
+			openFunc = option.openFunc
+		}
+		if option.closeFunc != nil {
+			closeFunc = option.closeFunc
+		}
+	}
+
+	var lifeCycleElements []StreamLifecycle
+	if openFunc != nil || closeFunc != nil {
+		lifeCycleElements = []StreamLifecycle{
+			NewStreamLifecycle(openFunc, closeFunc),
+		}
+	}
+	return &stream[T]{provider: streamProviderFunc, allLifecycleElement: lifeCycleElements}
 }
 
 type StreamProviderFunc[T any] func(ctx context.Context) (*T, error)
@@ -285,18 +316,16 @@ func (s *stream[T]) Limit(limit int) Stream[T] {
 	}
 	alreadyConsumed := 1
 	return newStream[T](func(ctx context.Context) (*T, error) {
-		for {
-			if alreadyConsumed > limit {
-				return nil, io.EOF
-			}
-
-			v, err := s.provider(ctx)
-			if err != nil {
-				return nil, err
-			}
-			alreadyConsumed++
-			return v, nil
+		if alreadyConsumed > limit {
+			return nil, io.EOF
 		}
+
+		v, err := s.provider(ctx)
+		if err != nil {
+			return nil, err
+		}
+		alreadyConsumed++
+		return v, nil
 	}, s.allLifecycleElement)
 }
 
