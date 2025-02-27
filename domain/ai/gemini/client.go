@@ -22,7 +22,7 @@ func GetClient(ctx context.Context) (*genai.Client, error) {
 	return client, nil
 }
 
-func GetModel(ctx context.Context) (*genai.GenerativeModel, error) {
+func GetDefaultModel(ctx context.Context) (*genai.GenerativeModel, error) {
 	c, err := GetClient(ctx)
 	if err != nil {
 		return nil, err

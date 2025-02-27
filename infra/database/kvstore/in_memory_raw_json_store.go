@@ -50,7 +50,7 @@ func (s *InMemoryRawJsonStore) CreateSpaceStore(_ context.Context, spaceHierarch
 		}
 		currInMemoryStore = currInMemoryStore.spacesBySpaceName[spaceName]
 	}
-	return s.spacesBySpaceName[spaceHierarchy[0]], nil
+	return currInMemoryStore, nil
 
 }
 

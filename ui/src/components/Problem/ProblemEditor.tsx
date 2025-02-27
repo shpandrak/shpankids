@@ -19,6 +19,7 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
             <div style={{display: "grid", gridTemplateColumns: "1fr 3fr", gap: "10px", textAlign: "left"}}>
                 <label>Title</label>
                 <textarea
+                    dir="auto"
                     value={props.problem.title}
                     onChange={(e) => props.onChanges({ ...props.problem, title: e.target.value })}
                     rows={4} // Adjust the number of rows for initial height

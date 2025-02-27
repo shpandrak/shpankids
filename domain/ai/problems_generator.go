@@ -20,7 +20,7 @@ func GenerateProblems(
 	examples shpanstream.Stream[openapi.ApiProblemForEdit],
 	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
-	model, err := gemini.GetModel(ctx)
+	model, err := gemini.GetDefaultModel(ctx)
 	if err != nil {
 		return shpanstream.NewErrorStream[openapi.ApiProblemForEdit](err)
 	}

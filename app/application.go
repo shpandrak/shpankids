@@ -1,7 +1,6 @@
 package app
 
 import (
-	"cloud.google.com/go/firestore"
 	"fmt"
 	"shpankids/domain/assignment"
 	"shpankids/domain/family"
@@ -12,11 +11,11 @@ import (
 	"shpankids/webserver/auth"
 )
 
-func Start(kvs kvstore.RawJsonStore, fs *firestore.Client) error {
+func Start(kvs kvstore.RawJsonStore) error {
 	userManager := user.NewUserManager(kvs)
 	familyManager := family.NewFamilyManager(kvs, auth.GetUserInfo)
 	sessionManager := session.NewSessionManager(kvs)
-	assignmentManager := assignment.NewAssignmentManager(fs, kvs, auth.GetUserInfo, familyManager, sessionManager)
+	assignmentManager := assignment.NewAssignmentManager(kvs, auth.GetUserInfo, familyManager, sessionManager)
 
 	err := appBootstrap(userManager, familyManager, sessionManager)
 	if err != nil {
