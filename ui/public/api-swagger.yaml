@@ -603,7 +603,6 @@ components:
     ApiFamilyTask:
       type: object
       required:
-        - id
         - title
         - memberIds
       properties:
