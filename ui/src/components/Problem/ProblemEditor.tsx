@@ -26,7 +26,7 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
                     style={{ width: '100%' }} // Optional: Make it full width
                 />
                 <label>Description</label>
-                <input type="text" value={props.problem.description} onChange={
+                <input dir="auto" type="text" value={props.problem.description} onChange={
                     (e) => props.onChanges({...props.problem, description: e.target.value})
                 }/>
                 <label>Answers</label>
@@ -54,7 +54,7 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
                                         })}/>
                                 </td>
                                 <td>
-                                    <input type="text" value={answer.title} onChange={
+                                    <input dir="auto" type="text" value={answer.title} onChange={
                                         (e) => props.onChanges({
                                             ...props.problem,
                                             answers: props.problem.answers.map((a, innerIdx) => {
@@ -64,7 +64,7 @@ const ProblemEditor: React.FC<ProblemEditorProps> = (props) => {
                                     }/>
                                 </td>
                                 <td>
-                                    <input type="text" value={answer.description} onChange={
+                                    <input dir="auto" type="text" value={answer.description} onChange={
                                         (e) => props.onChanges({
                                             ...props.problem,
                                             answers: props.problem.answers.map((a) => {

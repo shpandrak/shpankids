@@ -28,11 +28,21 @@ const ProblemSetEditor: React.FC<ProblemSetEditorProps> = (props) => {
             <h2>Edit Problem Set</h2>
             <div style={{display: "grid", gridTemplateColumns: "1fr 3fr", gap: "10px", textAlign: "left"}}>
                 <label>Title</label>
-                <input type="text" value={props.problemSet.title} onChange={
-                    (e) => props.updateProblemSetHandler({...props.problemSet, title: e.target.value})
-                }/>
+                <input
+                    dir={"auto"}
+                    type="text"
+                    value={props.problemSet.title}
+                    onChange={
+                        (e) =>
+                            props.updateProblemSetHandler({...props.problemSet, title: e.target.value})
+                    }
+                />
                 <label>Description</label>
-                <input type="text" value={props.problemSet.description} onChange={
+                <input
+                    dir={"auto"}
+                    type="text"
+                    value={props.problemSet.description}
+                    onChange={
                     (e) => props.updateProblemSetHandler({...props.problemSet, description: e.target.value})
                 }/>
             </div>

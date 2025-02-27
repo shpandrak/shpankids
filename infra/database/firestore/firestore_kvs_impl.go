@@ -40,9 +40,12 @@ func (kvs *kvsImpl) StreamAllNamespaces(ctx context.Context) shpanstream.Stream[
 	})
 }
 
-func (kvs *kvsImpl) StreamAllJson(ctx context.Context, namespace string) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
+func (kvs *kvsImpl) StreamAllJson(
+	_ context.Context,
+	namespace string,
+) shpanstream.Stream[functional.Entry[string, json.RawMessage]] {
 	return shpanstream.NewStream[functional.Entry[string, json.RawMessage]](&fsStreamProvider{
-		docIter: kvs.getCollectionRef(namespace).Documents(ctx),
+		colRef: kvs.getCollectionRef(namespace),
 	})
 }
 
@@ -136,6 +139,7 @@ func (kvs *kvsImpl) GetJSONIfExist(ctx context.Context, namespace, key string) (
 
 func (kvs *kvsImpl) ListAllJSON(ctx context.Context, namespace string) (map[string]json.RawMessage, error) {
 	allDocs := kvs.getCollectionRef(namespace).Documents(ctx)
+	defer allDocs.Stop()
 	result := make(map[string]json.RawMessage)
 	for {
 		doc, err := allDocs.Next()
@@ -155,17 +159,25 @@ func (kvs *kvsImpl) ListAllJSON(ctx context.Context, namespace string) (map[stri
 }
 
 type fsStreamProvider struct {
+	colRef  *firestore.CollectionRef
 	docIter *firestore.DocumentIterator
+	//started time.Time
 }
 
-func (f fsStreamProvider) Open(_ context.Context) error {
+func (f *fsStreamProvider) Open(ctx context.Context) error {
+	//f.started = time.Now()
+	f.docIter = f.colRef.Documents(ctx)
 	return nil
 }
 
-func (f fsStreamProvider) Close() {
+func (f *fsStreamProvider) Close() {
+	f.docIter.Stop()
+	//dur := time.Since(f.started)
+	//slog.Info(fmt.Sprintf("Stream %s closed after %v\n", f.colRef.Path, dur))
+
 }
 
-func (f fsStreamProvider) Emit(_ context.Context) (*functional.Entry[string, json.RawMessage], error) {
+func (f *fsStreamProvider) Emit(_ context.Context) (*functional.Entry[string, json.RawMessage], error) {
 	doc, err := f.docIter.Next()
 	if err != nil {
 		if errors.Is(err, iterator.Done) {

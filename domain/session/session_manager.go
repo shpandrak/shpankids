@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const sessionValueKey = "shpanUserSession"
+
 type manager struct {
 	repository sessionRepository
 }
@@ -18,10 +20,20 @@ func NewSessionManager(kvs kvstore.RawJsonStore) shpankids.SessionManager {
 }
 
 func (m *manager) Get(ctx context.Context, email string) (*shpankids.Session, error) {
+
+	// Check first if already in ctx
+	if s, ok := ctx.Value(sessionValueKey).(*shpankids.Session); ok {
+		return s, nil
+	}
+
 	dbS, err := m.repository.Get(ctx, email)
 	if err != nil {
 		return nil, err
 	}
+
+	// Save in ctx
+	ctx = context.WithValue(ctx, sessionValueKey, dbS)
+
 	return mapSession(dbS)
 
 }

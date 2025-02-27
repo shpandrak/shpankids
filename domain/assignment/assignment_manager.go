@@ -20,20 +20,6 @@ type managerImpl struct {
 	familyManager      shpankids.FamilyManager
 }
 
-func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) shpanstream.Stream[shpankids.Assignment] {
-	userId, err := m.userSessionManager(ctx)
-	if err != nil {
-		return shpanstream.NewErrorStream[shpankids.Assignment](err)
-	}
-
-	s, err := m.sessionManager.Get(ctx, *userId)
-	if err != nil {
-		return shpanstream.NewErrorStream[shpankids.Assignment](err)
-	}
-
-	return m.doListAssignments(ctx, datekvs.TodayDate(s.Location), s.FamilyId, *userId)
-}
-
 func NewAssignmentManager(
 	kvs kvstore.RawJsonStore,
 	userSessionManager shpankids.UserSessionManager,
@@ -46,6 +32,20 @@ func NewAssignmentManager(
 		familyManager:      familyManager,
 		sessionManager:     sessionManager,
 	}
+}
+
+func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) shpanstream.Stream[shpankids.Assignment] {
+	userId, err := m.userSessionManager(ctx)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
+	}
+
+	s, err := m.sessionManager.Get(ctx, *userId)
+	if err != nil {
+		return shpanstream.NewErrorStream[shpankids.Assignment](err)
+	}
+
+	return m.doListAssignments(ctx, datekvs.TodayDate(s.Location), s.FamilyId, *userId)
 }
 
 func (m *managerImpl) GetTaskStats(
@@ -81,10 +81,12 @@ func (m *managerImpl) GetTaskStats(
 		return nil
 	})
 
+	// Get all the family tasks
 	familyTasks, err := m.familyManager.ListFamilyTasks(ctx, s.FamilyId).CollectFilterNil(ctx)
 	if err != nil {
 		return shpanstream.NewErrorStream[shpankids.TaskStats](err)
 	}
+
 	return shpanstream.ConcatenatedStream[shpankids.TaskStats](
 		functional.MapSliceNoErr(userIdsToFetch, func(userId string) shpanstream.Stream[shpankids.TaskStats] {
 			return m.getUserTaskStatesForDateRange(
@@ -295,14 +297,17 @@ func (m *managerImpl) getUserTaskStatesForDateRange(
 				DoneTasksCount:  0,
 			}
 
-			err := userTaskRepo.StreamAllForDate(ctx, *dt).Consume(ctx, func(dr *functional.Entry[string, dbUserTaskStatus]) {
+			err := userTaskRepo.StreamAllForDate(ctx, *dt).Consume(
+				ctx,
+				func(dr *functional.Entry[string, dbUserTaskStatus]) {
 
-				if _, found := userAssignableTasksByTaskId[dr.Key]; found {
-					if dr.Value.Status == shpankids.StatusDone {
-						ret.DoneTasksCount++
+					if _, found := userAssignableTasksByTaskId[dr.Key]; found {
+						if dr.Value.Status == shpankids.StatusDone {
+							ret.DoneTasksCount++
+						}
 					}
-				}
-			})
+				},
+			)
 			if err != nil {
 				return nil, err
 			}

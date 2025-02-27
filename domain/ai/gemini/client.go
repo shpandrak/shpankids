@@ -11,6 +11,8 @@ import (
 var client *genai.Client
 var once sync.Once
 
+const defaultGeminiModel = "gemini-2.0-flash"
+
 func GetClient(ctx context.Context) (*genai.Client, error) {
 	var innerErr error
 	once.Do(func() {
@@ -27,7 +29,8 @@ func GetDefaultModel(ctx context.Context) (*genai.GenerativeModel, error) {
 	if err != nil {
 		return nil, err
 	}
-	model := c.GenerativeModel("gemini-2.0-flash")
+
+	model := c.GenerativeModel(defaultGeminiModel)
 	//model.SetTemperature(1)
 	//model.SetTopK(40)
 	//model.SetTopP(0.95)
