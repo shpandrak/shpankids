@@ -33,44 +33,46 @@ const SolutionsAnalysisComp: React.FC<SolutionsAnalysisCompProps> = (props) => {
                                     <h3>{incorrectSolutions.length} Incorrect solutions</h3>
                                     {incorrectSolutions.map(sol => {
                                         return (
-                                            <td>
-                                                <table width={"100%"}>
-                                                    <tbody>
-                                                    <tr key={sol.problemId}>
-                                                        <td>
-                                                            {sol.problemTitle}
-                                                        </td>
-                                                        <td>
-                                                            <button onClick={() => {
-                                                                props.problemFetcher(sol.problemId)
-                                                                    .then(problem => {
-                                                                        props.uiCtx.showModal((
-                                                                            <div>
-                                                                                <h3>{problem.title}</h3>
-                                                                                <p>{problem.description}</p>
-                                                                                <h4>Answers</h4>
-                                                                                <ol>
-                                                                                    {problem.answers.map((ans, idx) => {
-                                                                                        return (
-                                                                                            <li key={idx + 1}>
-                                                                                                {ans.id === sol.correctAnswerId && (<div><b>Correct Answer:</b></div>)}
-                                                                                                {ans.id === sol.userProvidedAnswerId && (<div><b>Your Answer:</b></div>)}
-                                                                                                {ans.title}
-                                                                                            </li>
-                                                                                        )
-                                                                                    })}
-                                                                                </ol>
-                                                                            </div>
-                                                                        ))
-                                                                    })
-                                                                    .catch(showError);
-                                                            }}><FontAwesomeIcon icon={faInfo}/></button>
-                                                        </td>
+                                            <table width={"100%"}>
+                                                <tbody>
+                                                <tr key={sol.problemId}>
+                                                    <td>
+                                                        {sol.problemTitle}
+                                                    </td>
+                                                    <td>
+                                                        <button onClick={() => {
+                                                            props.problemFetcher(sol.problemId)
+                                                                .then(problem => {
+                                                                    props.uiCtx.showModal((
+                                                                        <div>
+                                                                            <h3>{problem.title}</h3>
+                                                                            <p>{problem.description}</p>
+                                                                            <h4>Answers</h4>
+                                                                            <ol>
+                                                                                {problem.answers.map((ans, idx) => {
+                                                                                    return (
+                                                                                        <li key={idx + 1}>
+                                                                                            {ans.id === sol.correctAnswerId && (
+                                                                                                <div><b>Correct
+                                                                                                    Answer:</b></div>)}
+                                                                                            {ans.id === sol.userProvidedAnswerId && (
+                                                                                                <div><b>Your Answer:</b>
+                                                                                                </div>)}
+                                                                                            {ans.title}
+                                                                                        </li>
+                                                                                    )
+                                                                                })}
+                                                                            </ol>
+                                                                        </div>
+                                                                    ))
+                                                                })
+                                                                .catch(showError);
+                                                        }}><FontAwesomeIcon icon={faInfo}/></button>
+                                                    </td>
 
-                                                    </tr>
-                                                    </tbody>
-                                                </table>
-                                            </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
                                         )
                                     })}
                                 </>
@@ -84,41 +86,42 @@ const SolutionsAnalysisComp: React.FC<SolutionsAnalysisCompProps> = (props) => {
                                     <h3>{correctSolutions.length} Correct solutions</h3>
                                     {correctSolutions.map((sol: ApiUserProblemSolution) => {
                                         return (
-                                            <td>
-                                                <table width={"100%"}>
-                                                    <tbody>
-                                                    <tr key={sol.problemId}>
-                                                        <td>
-                                                            {sol.problemTitle}
-                                                        </td>
-                                                        <td>
-                                                            <button onClick={() => {
-                                                                props.problemFetcher(sol.problemId)
-                                                                    .then(problem => {
-                                                                        props.uiCtx.showModal((
-                                                                            <div>
-                                                                                <h3>{problem.title}</h3>
-                                                                                <p>{problem.description}</p>
-                                                                                <h4>Answers</h4>
-                                                                                <ol>
-                                                                                    {problem.answers.map((ans, idx) => {
-                                                                                        return (
-                                                                                            <li key={idx + 1}>
-                                                                                                {ans.id === sol.correctAnswerId && (<div><b>Correct Answer:</b></div>)}{ans.title}
-                                                                                            </li>
-                                                                                        )
-                                                                                    })}
-                                                                                </ol>
-                                                                            </div>
-                                                                        ))
-                                                                    })
-                                                                    .catch(showError);
-                                                            }}><FontAwesomeIcon icon={faInfo}/></button>
-                                                        </td>
-                                                    </tr>
-                                                    </tbody>
-                                                </table>
-                                            </td>
+                                            <table width={"100%"}>
+                                                <tbody>
+                                                <tr key={sol.problemId}>
+                                                    <td>
+                                                        {sol.problemTitle}
+                                                    </td>
+                                                    <td>
+                                                        <button onClick={() => {
+                                                            props.problemFetcher(sol.problemId)
+                                                                .then(problem => {
+                                                                    props.uiCtx.showModal((
+                                                                        <div>
+                                                                            <h3>{problem.title}</h3>
+                                                                            <p>{problem.description}</p>
+                                                                            <h4>Answers</h4>
+                                                                            <ol>
+                                                                                {problem.answers.map((ans, idx) => {
+                                                                                    return (
+                                                                                        <li key={idx + 1}>
+                                                                                            {ans.id === sol.correctAnswerId && (
+                                                                                                <div><b>Correct
+                                                                                                    Answer:</b>
+                                                                                                </div>)}{ans.title}
+                                                                                        </li>
+                                                                                    )
+                                                                                })}
+                                                                            </ol>
+                                                                        </div>
+                                                                    ))
+                                                                })
+                                                                .catch(showError);
+                                                        }}><FontAwesomeIcon icon={faInfo}/></button>
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
                                         )
                                     })}
                                 </>

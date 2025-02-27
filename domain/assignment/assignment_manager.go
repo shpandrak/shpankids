@@ -35,14 +35,12 @@ func (m *managerImpl) ListAssignmentsForToday(ctx context.Context) shpanstream.S
 }
 
 func NewAssignmentManager(
-	fs *firestore.Client,
 	kvs kvstore.RawJsonStore,
 	userSessionManager shpankids.UserSessionManager,
 	familyManager shpankids.FamilyManager,
 	sessionManager shpankids.SessionManager,
 ) shpankids.AssignmentManager {
 	return &managerImpl{
-		fs:                 fs,
 		kvs:                kvs,
 		userSessionManager: userSessionManager,
 		familyManager:      familyManager,
