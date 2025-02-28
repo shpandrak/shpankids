@@ -49,18 +49,21 @@ type stream[T any] struct {
 type Stream[T any] interface {
 	Consume(ctx context.Context, f func(*T)) error
 	ConsumeWithErr(ctx context.Context, f func(*T) error) error
-	FilterWithError(predicate func(context.Context, *T) (bool, error)) Stream[T]
 	Filter(predicate func(*T) bool) Stream[T]
+	FilterWithError(predicate func(context.Context, *T) (bool, error)) Stream[T]
+
 	Limit(limit int) Stream[T]
-
 	Skip(limit int) Stream[T]
-
 	Count(ctx context.Context) (int, error)
+	IsEmpty(ctx context.Context) (bool, error)
+
 	FindFirst() Lazy[T]
 	GetFirst(ctx context.Context) (*T, error)
 	FindLast() Lazy[T]
+
 	Collect(ctx context.Context) ([]*T, error)
 	CollectFilterNil(ctx context.Context) ([]T, error)
+
 	SubscribeOnStreamLifecycle(lch StreamLifecycle) Stream[T]
 }
 
@@ -125,10 +128,10 @@ func (s *stream[T]) ConsumeWithErr(ctx context.Context, f func(*T) error) error 
 	})...)
 
 	defer func() {
-		cancelFunc()
 		for _, l := range s.allLifecycleElement {
 			l.Close()
 		}
+		cancelFunc()
 	}()
 
 	if err != nil {
@@ -230,17 +233,27 @@ func MapStreamWhileFilteringWithError[SRC any, TGT any](
 func (s *stream[T]) GetFirst(ctx context.Context) (*T, error) {
 	return s.FindFirst().Get(ctx)
 }
-func (s *stream[T]) FindFirst() Lazy[T] {
 
+type errResult struct {
+}
+
+func (e *errResult) Error() string {
+	return "error"
+}
+
+func (s *stream[T]) FindFirst() Lazy[T] {
 	return NewLazy[T](func(ctx context.Context) (*T, error) {
-		ctxWitCancel, cancelFunc := context.WithCancel(ctx)
-		defer cancelFunc()
 		var result *T
-		err := s.Consume(ctxWitCancel, func(v *T) {
+		err := s.ConsumeWithErr(ctx, func(v *T) error {
 			result = v
-			cancelFunc()
+			return &errResult{}
 		})
+
 		if err != nil {
+			var r *errResult
+			if errors.As(err, &r) {
+				return result, nil
+			}
 			return nil, err
 		}
 		return result, nil
@@ -352,7 +365,6 @@ func (s *stream[T]) SubscribeOnStreamLifecycle(lch StreamLifecycle) Stream[T] {
 }
 
 func (s *stream[T]) Count(ctx context.Context) (int, error) {
-
 	count := 0
 	err := s.Consume(ctx, func(v *T) {
 		count++
@@ -361,4 +373,8 @@ func (s *stream[T]) Count(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (s *stream[T]) IsEmpty(ctx context.Context) (bool, error) {
+	return s.FindFirst().IsEmpty(ctx)
 }

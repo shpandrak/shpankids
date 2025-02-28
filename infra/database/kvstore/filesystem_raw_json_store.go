@@ -220,3 +220,33 @@ func (s *FileSystemRawJsonStore) getSafeFilePath(namespace string, key string) (
 
 	return filepath.Join(s.rootDir, namespace, filename), nil
 }
+
+func (s *FileSystemRawJsonStore) ManipulateExistingJsonOrCreateNew(
+	_ context.Context,
+	namespace, key string,
+	f func(existingJson *json.RawMessage) (json.RawMessage, error),
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	filename, err := s.getSafeFilePath(namespace, key)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			data = nil
+		} else {
+			return err
+		}
+	}
+
+	newData, err := f((*json.RawMessage)(&data))
+	if err != nil {
+		return err
+	}
+
+	return fileutil.WriteFileAtomically(filename, newData)
+}

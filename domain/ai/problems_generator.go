@@ -15,8 +15,7 @@ import (
 
 func GenerateProblems(
 	ctx context.Context,
-	forUserId string,
-	problemSet shpankids.FamilyProblemSetDto,
+	problemSet shpankids.ProblemSetDto,
 	examples shpanstream.Stream[openapi.ApiProblemForEdit],
 	additionalRequestText string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
@@ -52,9 +51,7 @@ func GenerateProblems(
 			Role: "user",
 			Parts: []genai.Part{
 				genai.Text(fmt.Sprintf(
-					"Generate a list of problems to challenge the family member %s, "+
-						"on the topic of %s %s. Make the outputs in JSON format.",
-					forUserId,
+					"Generate a list of problems to challenge me on the topic of %s %s. Make the outputs in JSON format.",
 					problemSet.Title,
 					problemSet.Description,
 				)),
@@ -71,11 +68,10 @@ func GenerateProblems(
 	resp, err := session.SendMessage(
 		ctx,
 		genai.Text(fmt.Sprintf(
-			"base on the examples provided, please suggest next problems for family member %s, "+
+			"base on the examples provided, please suggest next problems challenging me "+
 				"on the same topic of %s. Make the outputs in JSON format. "+
 				"Each problem should have a title and a list of answers, "+
 				"from which only one is correct.%s",
-			forUserId,
 			problemSet.Title,
 			additionalRequestText,
 		)),

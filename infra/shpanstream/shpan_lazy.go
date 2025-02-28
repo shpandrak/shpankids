@@ -14,6 +14,7 @@ type Lazy[T any] interface {
 	OrElseGet(ctx context.Context, alt func() T) (T, error)
 	Or(alt Lazy[T]) Lazy[T]
 	Filter(predicate func(*T) bool) Lazy[T]
+	IsEmpty(ctx context.Context) (bool, error)
 }
 
 // Lazy - a generic lazy type
@@ -180,4 +181,12 @@ func (o *lazy[T]) UnmarshalJSON(data []byte) error {
 		return &value, nil
 	}
 	return nil
+}
+
+func (o *lazy[T]) IsEmpty(ctx context.Context) (bool, error) {
+	v, err := o.Get(ctx)
+	if err != nil {
+		return false, err
+	}
+	return v == nil, nil
 }

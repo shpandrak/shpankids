@@ -158,36 +158,35 @@ func (kvs *kvsImpl) ListAllJSON(ctx context.Context, namespace string) (map[stri
 	return result, nil
 }
 
-type fsStreamProvider struct {
-	colRef  *firestore.CollectionRef
-	docIter *firestore.DocumentIterator
-	//started time.Time
-}
-
-func (f *fsStreamProvider) Open(ctx context.Context) error {
-	//f.started = time.Now()
-	f.docIter = f.colRef.Documents(ctx)
-	return nil
-}
-
-func (f *fsStreamProvider) Close() {
-	f.docIter.Stop()
-	//dur := time.Since(f.started)
-	//slog.Info(fmt.Sprintf("Stream %s closed after %v\n", f.colRef.Path, dur))
-
-}
-
-func (f *fsStreamProvider) Emit(_ context.Context) (*functional.Entry[string, json.RawMessage], error) {
-	doc, err := f.docIter.Next()
-	if err != nil {
-		if errors.Is(err, iterator.Done) {
-			return nil, io.EOF
+func (kvs *kvsImpl) ManipulateExistingJsonOrCreateNew(
+	ctx context.Context,
+	namespace, key string,
+	f func(existingJson *json.RawMessage) (json.RawMessage, error),
+) error {
+	docRef := kvs.getCollectionRef(namespace)
+	return kvs.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		var existingJson *json.RawMessage
+		docSnapshot, err := tx.Get(docRef.Doc(key))
+		if err != nil {
+			// if the document does not exist, we should not return an error, but allow processing new json
+			if status.Code(err) != codes.NotFound {
+				return err
+			}
+		} else {
+			// just to be sure, since the tx docs are confusing
+			if docSnapshot != nil && docSnapshot.Exists() {
+				existingJsonData, err := json.Marshal(docSnapshot.Data())
+				if err != nil {
+					return err
+				}
+				existingJson = (*json.RawMessage)(&existingJsonData)
+			}
 		}
-		return nil, err
-	}
-	jsonData, err := json.Marshal(doc.Data())
-	if err != nil {
-		return nil, err
-	}
-	return &functional.Entry[string, json.RawMessage]{Key: doc.Ref.ID, Value: jsonData}, nil
+
+		newJson, err := f(existingJson)
+		if err != nil {
+			return err
+		}
+		return tx.Set(docRef.Doc(key), newJson)
+	})
 }

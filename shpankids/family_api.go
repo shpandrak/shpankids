@@ -2,9 +2,7 @@ package shpankids
 
 import (
 	"context"
-	"shpankids/infra/database/datekvs"
 	"shpankids/infra/shpanstream"
-	"shpankids/openapi"
 	"time"
 )
 
@@ -51,7 +49,7 @@ type ProblemAnswerDto struct {
 	Correct     bool
 }
 
-type FamilyProblemDto struct {
+type ProblemDto struct {
 	ProblemId   string
 	Title       string
 	Description string
@@ -69,13 +67,11 @@ type CreateProblemDto struct {
 	Answers     []CreateProblemAnswerDto
 }
 
-type FamilyProblemSetDto struct {
+type ProblemSetDto struct {
 	ProblemSetId string
 	Title        string
 	Description  string
 	Created      time.Time
-	Status       FamilyAssignmentStatus
-	StatusDate   time.Time
 }
 
 type ProblemSolutionDto struct {
@@ -98,6 +94,8 @@ const (
 )
 
 type FamilyManager interface {
+	GetProblemSetManagerForUser(ctx context.Context, forUserId string) (ProblemSetManager, error)
+
 	CreateFamily(ctx context.Context, familyId string, familyName string, memberUserIds []string, adminUserIds []string) error
 	GetFamily(ctx context.Context, familyId string) (*FamilyDto, error)
 	FindFamily(ctx context.Context, familyId string) (*FamilyDto, error)
@@ -105,66 +103,4 @@ type FamilyManager interface {
 	CreateFamilyTask(ctx context.Context, familyId string, familyTask FamilyTaskDto) error
 	ListFamilyTasks(ctx context.Context, familyId string) shpanstream.Stream[FamilyTaskDto]
 	DeleteFamilyTask(ctx context.Context, familyId string, familyTaskId string) error
-
-	CreateProblemsInSet(ctx context.Context, familyId string, forUserId string, problemSetId string, familyProblem []CreateProblemDto) error
-	CreateProblemSet(ctx context.Context, familyId string, forUserId string, familyProblemSet CreateProblemSetDto) error
-	ListProblemSetsForUser(ctx context.Context, familyId string, userId string) shpanstream.Stream[FamilyProblemSetDto]
-
-	ListProblemsForProblemSet(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		includingArchived bool,
-	) shpanstream.Stream[FamilyProblemDto]
-
-	GenerateNewProblems(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		additionalRequestText string,
-	) shpanstream.Stream[openapi.ApiProblemForEdit]
-
-	RefineProblems(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		origProblems shpanstream.Stream[openapi.ApiProblemForEdit],
-		refineInstructions string,
-	) shpanstream.Stream[openapi.ApiProblemForEdit]
-
-	SubmitProblemAnswer(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		problemId string,
-		forDate datekvs.Date,
-		answerId string,
-	) (bool, string, *FamilyProblemDto, error)
-
-	ListProblemSetSolutionsForDate(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		forDate datekvs.Date,
-	) shpanstream.Stream[ProblemSolutionDto]
-
-	ListUserProblemsSolutions(
-		ctx context.Context,
-		familyId string,
-		problemSetId string,
-		userId string,
-	) shpanstream.Stream[openapi.ApiUserProblemSolution]
-
-	GetProblem(
-		ctx context.Context,
-		familyId string,
-		userId string,
-		problemSetId string,
-		problemId string,
-	) (*FamilyProblemDto, error)
 }

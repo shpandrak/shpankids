@@ -5,27 +5,26 @@ import (
 	"shpankids/infra/database/archkvs"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
-	"shpankids/shpankids"
 	"time"
 )
 
 const problemSetsRepoUri = "problemSets"
 
-type ProblemsRepository archkvs.ArchivedKvs[string, DbProblem]
-type ProblemSetsRepository kvstore.JsonKvStore[string, DbProblemSet]
-type ProblemSolutionsRepository datekvs.DateKvStore[DbProblemSolution]
+type problemsRepository archkvs.ArchivedKvs[string, dbProblem]
+type problemSetsRepository kvstore.JsonKvStore[string, dbProblemSet]
+type problemSolutionsRepository datekvs.DateKvStore[dbProblemSolution]
 
-func NewProblemSetProblemsRepository(
+func newProblemSetProblemsRepository(
 	ctx context.Context,
 	kvs kvstore.RawJsonStore,
 	problemSetId string,
-) (ProblemsRepository, error) {
+) (problemsRepository, error) {
 	psStore, err := createRootProblemSetStore(ctx, kvs, problemSetId)
 	if err != nil {
 		return nil, err
 	}
 
-	return archkvs.NewArchivedKvsImpl[string, DbProblem](
+	return archkvs.NewArchivedKvsImpl[string, dbProblem](
 		ctx,
 		psStore,
 		"problems",
@@ -45,23 +44,23 @@ func createRootProblemSetStore(
 	})
 }
 
-func NewProblemsSolutionsRepository(
+func newProblemsSolutionsRepository(
 	ctx context.Context,
 	kvs kvstore.RawJsonStore,
 	problemSetId string,
-) (ProblemSolutionsRepository, error) {
+) (problemSolutionsRepository, error) {
 	psStore, err := createRootProblemSetStore(ctx, kvs, problemSetId)
 	if err != nil {
 		return nil, err
 	}
 
-	return datekvs.NewDateKvsImpl[DbProblemSolution](psStore), nil
+	return datekvs.NewDateKvsImpl[dbProblemSolution](psStore), nil
 }
 
-func NewProblemSetsRepository(
+func newProblemSetsRepository(
 	kvs kvstore.RawJsonStore,
-) (ProblemSetsRepository, error) {
-	return kvstore.NewJsonKvStoreImpl[string, DbProblemSet](
+) (problemSetsRepository, error) {
+	return kvstore.NewJsonKvStoreImpl[string, dbProblemSet](
 		kvs,
 		problemSetsRepoUri,
 		kvstore.StringKeyToString,
@@ -69,30 +68,30 @@ func NewProblemSetsRepository(
 	), nil
 }
 
-type DbProblemSet struct {
-	Title       string                           `json:"title"`
-	Description string                           `json:"description"`
-	Created     time.Time                        `json:"created"`
-	Status      shpankids.FamilyAssignmentStatus `json:"status"`
-	StatusDate  time.Time                        `json:"statusDate"`
+type dbProblemSet struct {
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Created     time.Time `json:"created"`
+	//Status      shpankids.FamilyAssignmentStatus `json:"status"`
+	//StatusDate  time.Time                        `json:"statusDate"`
 }
 
-type DbProblem struct {
+type dbProblem struct {
 	Title       string                     `json:"title"`
 	Description string                     `json:"description"`
 	Created     time.Time                  `json:"created"`
 	Hints       []string                   `json:"hints,omitempty"`
 	Explanation string                     `json:"explanation,omitempty"`
-	Answers     map[string]DbProblemAnswer `json:"answers"`
+	Answers     map[string]dbProblemAnswer `json:"answers"`
 }
 
-type DbProblemAnswer struct {
+type dbProblemAnswer struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
 	Correct     bool   `json:"correct,omitempty"`
 }
 
-type DbProblemSolution struct {
+type dbProblemSolution struct {
 	SelectedAnswerId string `json:"selectedAnswerId"`
 	Correct          bool   `json:"correct"`
 }

@@ -4,22 +4,21 @@ import (
 	"context"
 	"shpankids/infra/database/datekvs"
 	"shpankids/infra/database/kvstore"
-	"shpankids/shpankids"
 	"time"
 )
 
-type dbUserTaskStatus struct {
-	Comment    string                     `json:"comment"`
-	Status     shpankids.AssignmentStatus `json:"status"`
-	StatusTime time.Time                  `json:"statusTime"`
+type dbAssignmentStatus struct {
+	Comments       []string  `json:"comments,omitempty"`
+	PartsCompleted int       `json:"partsCompleted"`
+	LastUpdated    time.Time `json:"statusTime"`
 }
 
-type UserTaskStatusRepository datekvs.DateKvStore[dbUserTaskStatus]
+type assignmentStatusRepo datekvs.DateKvStore[dbAssignmentStatus]
 
-func NewUserTaskStatusRepository(ctx context.Context, kvs kvstore.RawJsonStore, userId string) (UserTaskStatusRepository, error) {
+func newAssignmentStatusRepo(ctx context.Context, kvs kvstore.RawJsonStore, userId string) (assignmentStatusRepo, error) {
 	byUserKvs, err := kvs.CreateSpaceStore(ctx, []string{"users", userId})
 	if err != nil {
 		return nil, err
 	}
-	return datekvs.NewDateKvsImpl[dbUserTaskStatus](byUserKvs), nil
+	return datekvs.NewDateKvsImpl[dbAssignmentStatus](byUserKvs), nil
 }

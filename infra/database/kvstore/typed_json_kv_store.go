@@ -15,6 +15,7 @@ type JsonKvStore[K comparable, T any] interface {
 	Find(ctx context.Context, key K) (*T, error)
 	List(ctx context.Context) (map[K]T, error)
 	Stream(ctx context.Context) shpanstream.Stream[functional.Entry[K, T]]
+	ManipulateOrCreate(ctx context.Context, key K, f func(existing *T) (T, error)) error
 }
 
 type JsonKvStoreImpl[K comparable, T any] struct {
@@ -121,4 +122,26 @@ func (j *JsonKvStoreImpl[K, T]) Stream(ctx context.Context) shpanstream.Stream[f
 			}
 			return &functional.Entry[K, T]{Key: key, Value: parsedVal}, nil
 		})
+}
+
+func (j *JsonKvStoreImpl[K, T]) ManipulateOrCreate(ctx context.Context, key K, f func(existing *T) (T, error)) error {
+	return j.kvStore.ManipulateExistingJsonOrCreateNew(ctx, j.namespace, j.keyToStrFunc(key), func(existingJson *json.RawMessage) (json.RawMessage, error) {
+		var existingValue *T
+		if existingJson != nil {
+			err := json.Unmarshal(*existingJson, existingValue)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal json when reading from namespace %s, key %v: %w", j.namespace, key, err)
+			}
+		}
+		updatedValue, err := f(existingValue)
+		if err != nil {
+			return nil, err
+		}
+		marshal, err := json.MarshalIndent(updatedValue, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		return marshal, nil
+	})
+
 }

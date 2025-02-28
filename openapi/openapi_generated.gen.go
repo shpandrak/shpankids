@@ -287,7 +287,7 @@ type SubmitProblemAnswerJSONRequestBody = ApiSubmitProblemAnswerCommandArgs
 // UpdateFamilyTaskJSONRequestBody defines body for UpdateFamilyTask for application/json ContentType.
 type UpdateFamilyTaskJSONRequestBody = ApiUpdateFamilyTaskCommandArgs
 
-// UpdateTaskStatusJSONRequestBody defines body for UpdateTaskStatus for application/json ContentType.
+// UpdateTaskStatusJSONRequestBody defines body for UpdateAssignmentStatus for application/json ContentType.
 type UpdateTaskStatusJSONRequestBody = ApiUpdateTaskStatusCommandArgs
 
 // ServerInterface represents all server handlers.
@@ -1595,7 +1595,7 @@ func (sh *strictHandler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request
 		return sh.ssi.UpdateTaskStatus(ctx, request.(UpdateTaskStatusRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateTaskStatus")
+		handler = middleware(handler, "UpdateAssignmentStatus")
 	}
 
 	response, err := handler(r.Context(), w, r, request)

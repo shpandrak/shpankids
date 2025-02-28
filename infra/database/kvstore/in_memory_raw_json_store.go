@@ -142,3 +142,24 @@ func (s *InMemoryRawJsonStore) ListAllJSON(_ context.Context, namespace string) 
 	}
 	return ret, nil
 }
+
+func (s *InMemoryRawJsonStore) ManipulateExistingJsonOrCreateNew(
+	_ context.Context,
+	namespace, key string,
+	f func(existingJson *json.RawMessage) (json.RawMessage, error),
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.store[namespace] == nil {
+		s.store[namespace] = map[string]json.RawMessage{}
+	}
+
+	existingJson := s.store[namespace][key]
+	newJson, err := f(&existingJson)
+	if err != nil {
+		return err
+	}
+	s.store[namespace][key] = newJson
+	return nil
+}

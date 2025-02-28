@@ -1,6 +1,7 @@
 package family
 
 import (
+	"context"
 	"shpankids/infra/database/kvstore"
 	"shpankids/shpankids"
 	"time"
@@ -30,4 +31,19 @@ func newFamilyRepository(store kvstore.RawJsonStore) repository {
 		kvstore.StringKeyToString,
 		kvstore.StringToKey,
 	)
+}
+
+func createFamilyUserRootStore(
+	ctx context.Context,
+	kvs kvstore.RawJsonStore,
+	familyId string,
+	userId string,
+) (kvstore.RawJsonStore, error) {
+	familyUserRootRepo, err := kvs.CreateSpaceStore(ctx, []string{
+		familiesSpaceStoreUri,
+		familyId,
+		"users",
+		userId,
+	})
+	return familyUserRootRepo, err
 }

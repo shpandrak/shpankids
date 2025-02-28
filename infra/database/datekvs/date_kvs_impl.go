@@ -124,8 +124,15 @@ func (d *dateKvsImpl[T]) StreamRange(ctx context.Context, from Date, to Date) sh
 				func(entry *functional.Entry[string, T]) *DatedRecord[functional.Entry[string, T]] {
 					return &DatedRecord[functional.Entry[string, T]]{*ns, *entry}
 				})
-
 		},
 	)
+}
 
+func (d *dateKvsImpl[T]) ManipulateOrCreate(
+	ctx context.Context,
+	forDate Date,
+	key string,
+	manipulator func(*T) (T, error),
+) error {
+	return d.getStoreForDate(ctx, forDate).ManipulateOrCreate(ctx, key, manipulator)
 }

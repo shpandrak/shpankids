@@ -23,7 +23,7 @@ const (
 	AssignmentTypeProblemSet AssignmentType = "problemSet"
 )
 
-type Assignment struct {
+type DailyAssignmentDto struct {
 	Id          string
 	ForDate     datekvs.Date
 	Type        AssignmentType
@@ -32,7 +32,15 @@ type Assignment struct {
 	Description string
 }
 
-type TaskStats struct {
+type CreateAssignmentArgsDto struct {
+	Id            string
+	Type          AssignmentType
+	Title         string
+	NumberOfParts int
+	Description   string
+}
+
+type AssignmentStats struct {
 	UserId          string
 	ForDate         time.Time
 	TotalTasksCount int
@@ -40,7 +48,12 @@ type TaskStats struct {
 }
 
 type AssignmentManager interface {
-	ListAssignmentsForToday(ctx context.Context) shpanstream.Stream[Assignment]
-	GetTaskStats(ctx context.Context, fromDate datekvs.Date, toDate datekvs.Date) shpanstream.Stream[TaskStats]
-	UpdateTaskStatus(ctx context.Context, forDay time.Time, taskId string, status AssignmentStatus, comment string) error
+	ArchiveUserAssignment(ctx context.Context, forUserId string, assignmentId string) error
+	CreateNewAssignment(ctx context.Context, forUserId string, args CreateAssignmentArgsDto) error
+
+	ReportTaskProgress(ctx context.Context, forUserId string, forDate datekvs.Date, assignmentId string, partsDelta int, comment string) error
+
+	ListMyAssignmentsForToday(ctx context.Context) shpanstream.Stream[DailyAssignmentDto]
+	GetAssignmentStats(ctx context.Context, fromDate datekvs.Date, toDate datekvs.Date) shpanstream.Stream[AssignmentStats]
+	UpdateAssignmentStatus(ctx context.Context, forDay time.Time, taskId string, status AssignmentStatus, comment string) error
 }

@@ -11,6 +11,7 @@ type DateKvStore[T any] interface {
 	Unset(ctx context.Context, forDate Date, key string) error
 	Get(ctx context.Context, forDate Date, key string) (T, error)
 	Find(ctx context.Context, forDate Date, key string) (*T, error)
+	ManipulateOrCreate(ctx context.Context, forDate Date, key string, manipulator func(*T) (T, error)) error
 
 	Stream(ctx context.Context) shpanstream.Stream[DatedRecord[functional.Entry[string, T]]]
 	StreamAllForDate(ctx context.Context, forDate Date) shpanstream.Stream[functional.Entry[string, T]]

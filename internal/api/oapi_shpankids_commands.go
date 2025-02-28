@@ -15,7 +15,7 @@ func (oa *OapiServerApiImpl) UpdateTaskStatus(
 	ctx context.Context,
 	request openapi.UpdateTaskStatusRequestObject,
 ) (openapi.UpdateTaskStatusResponseObject, error) {
-	err := oa.assignmentManager.UpdateTaskStatus(
+	err := oa.assignmentManager.UpdateAssignmentStatus(
 		ctx,
 		request.Body.ForDate,
 		request.Body.TaskId,
@@ -51,11 +51,12 @@ func (oa *OapiServerApiImpl) CreateFamilyTask(ctx context.Context, request opena
 }
 
 func (oa *OapiServerApiImpl) UpdateFamilyTask(
-	ctx context.Context,
-	request openapi.UpdateFamilyTaskRequestObject,
+	_ context.Context,
+	_ openapi.UpdateFamilyTaskRequestObject,
 ) (openapi.UpdateFamilyTaskResponseObject, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+
 func (oa *OapiServerApiImpl) DeleteFamilyTask(
 	ctx context.Context,
 	request openapi.DeleteFamilyTaskRequestObject,
@@ -79,14 +80,13 @@ func (oa *OapiServerApiImpl) CreateProblemSet(
 	ctx context.Context,
 	request openapi.CreateProblemSetRequestObject,
 ) (openapi.CreateProblemSetResponseObject, error) {
-	_, s, err := oa.getUserAndSession(ctx)
+	userPsManager, err := oa.familyManager.GetProblemSetManagerForUser(ctx, request.Body.ForUserId)
 	if err != nil {
 		return nil, err
 	}
-	err = oa.familyManager.CreateProblemSet(
+
+	err = userPsManager.CreateProblemSet(
 		ctx,
-		s.FamilyId,
-		request.Body.ForUserId,
 		shpankids.CreateProblemSetDto{
 			ProblemSetId: uuid.NewString(),
 			Title:        request.Body.Title,
@@ -102,16 +102,14 @@ func (oa *OapiServerApiImpl) GenerateProblems(
 	ctx context.Context,
 	request openapi.GenerateProblemsRequestObject,
 ) (openapi.GenerateProblemsResponseObject, error) {
-	_, s, err := oa.getUserAndSession(ctx)
+	userPsManager, err := oa.familyManager.GetProblemSetManagerForUser(ctx, request.Body.UserId)
 	if err != nil {
 		return nil, err
 	}
 	return &streamingProblemsForEdit{
 		ctx: ctx,
-		stream: oa.familyManager.GenerateNewProblems(
+		stream: userPsManager.GenerateNewProblems(
 			ctx,
-			s.FamilyId,
-			request.Body.UserId,
 			request.Body.ProblemSetId,
 			castutil.StrPtrToStr(request.Body.AdditionalRequestText),
 		),
@@ -123,16 +121,14 @@ func (oa *OapiServerApiImpl) RefineProblems(
 	ctx context.Context,
 	request openapi.RefineProblemsRequestObject,
 ) (openapi.RefineProblemsResponseObject, error) {
-	_, s, err := oa.getUserAndSession(ctx)
+	userPsManager, err := oa.familyManager.GetProblemSetManagerForUser(ctx, request.Body.UserId)
 	if err != nil {
 		return nil, err
 	}
 	return &streamingProblemsForEdit{
 		ctx: ctx,
-		stream: oa.familyManager.RefineProblems(
+		stream: userPsManager.RefineProblems(
 			ctx,
-			s.FamilyId,
-			request.Body.UserId,
 			request.Body.ProblemSetId,
 			shpanstream.Just(request.Body.Problems...),
 			request.Body.RefineText,

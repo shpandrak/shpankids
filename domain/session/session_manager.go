@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const sessionValueKey = "shpanUserSession"
+const sessionValueKey = "shpanCtx-userSession"
 
 type manager struct {
 	repository sessionRepository

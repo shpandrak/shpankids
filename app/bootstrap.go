@@ -116,11 +116,14 @@ func appBootstrap(
 			}
 		}
 
+		petePsManager, err := familyManager.GetProblemSetManagerForUser(bootstrapCtx, peteUserId)
+		if err != nil {
+			return err
+		}
+
 		problemSet1Id := "problemSet1"
-		err = familyManager.CreateProblemSet(
+		err = petePsManager.CreateProblemSet(
 			bootstrapCtx,
-			shpanFamilyId,
-			peteUserId,
 			shpankids.CreateProblemSetDto{
 				ProblemSetId: problemSet1Id,
 				Title:        "שאלות בתאוריה של המוזיקה",
@@ -186,10 +189,9 @@ func appBootstrap(
 				},
 			},
 		}
-		err = familyManager.CreateProblemsInSet(
+
+		err = petePsManager.CreateProblemsInSet(
 			bootstrapCtx,
-			shpanFamilyId,
-			peteUserId,
 			problemSet1Id,
 			problemsPack,
 		)

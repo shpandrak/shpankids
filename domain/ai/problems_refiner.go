@@ -15,8 +15,7 @@ import (
 
 func RefineProblems(
 	ctx context.Context,
-	forUserId string,
-	problemSet shpankids.FamilyProblemSetDto,
+	problemSet shpankids.ProblemSetDto,
 	origProblems shpanstream.Stream[openapi.ApiProblemForEdit],
 	refineInstructions string,
 ) shpanstream.Stream[openapi.ApiProblemForEdit] {
@@ -56,11 +55,10 @@ func RefineProblems(
 			Role: "user",
 			Parts: []genai.Part{
 				genai.Text(fmt.Sprintf(
-					"Generate a list of problems to challenge the family member %s, "+
+					"Generate a list of problems to challenge me "+
 						"on the topic of %s %s. Make the outputs in JSON format."+
 						"Each problem should have a title and a list of answers, "+
 						"from which only one is correct",
-					forUserId,
 					problemSet.Title,
 					problemSet.Description,
 				)),
@@ -77,10 +75,9 @@ func RefineProblems(
 	resp, err := session.SendMessage(
 		ctx,
 		genai.Text(fmt.Sprintf(
-			"please refine the problems you generated for family member %s, "+
+			"please refine the problems you generated for me "+
 				"on the same topic of %s. Make the outputs in JSON format. "+
 				"please refine and return the problems according to the following request: %s",
-			forUserId,
 			problemSet.Title,
 			refineInstructions,
 		)),
